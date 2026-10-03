@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Environment files with real values (the committed template is .env.example)
+.env
+.env.*
+!.env.example
+
+# Downloaded geodata tiles (re-downloadable, too large for git)
+backend/data/
+
+# Browser test output
+frontend/test-results/
+frontend/playwright-report/
+
+# Editors and operating systems
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
