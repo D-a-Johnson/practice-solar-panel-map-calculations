@@ -11,6 +11,7 @@ htmlcov/
 node_modules/
 dist/
 *.tsbuildinfo
+*.log
 
 # Environment files with real values (the committed template is .env.example)
 .env
