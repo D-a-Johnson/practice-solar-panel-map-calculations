@@ -1,3 +1,5 @@
+import { MapView } from "./components/map/MapView";
+
 /**
  * Page shell: a header on top, the map filling the remaining space, and
  * the results panel on the right. Below the `md` breakpoint (768 px) the
@@ -14,9 +16,7 @@ export default function App() {
 
       <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] md:grid-cols-[1fr_24rem] md:grid-rows-1">
         <section aria-label="Map" className="relative min-h-80 bg-slate-200">
-          <p className="absolute inset-0 grid place-items-center text-slate-500">
-            The map goes here.
-          </p>
+          <MapView />
         </section>
 
         <aside
