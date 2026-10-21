@@ -1,6 +1,15 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { Map, NavigationControl, ScaleControl } from "@vis.gl/react-maplibre";
+import {
+  Layer,
+  Map,
+  NavigationControl,
+  ScaleControl,
+  Source,
+  type MapLayerMouseEvent,
+} from "@vis.gl/react-maplibre";
+import type { FeatureCollection } from "geojson";
+import { useMemo } from "react";
 
 /**
  * MapLibre decodes map tiles in a Web Worker. Version 6 builds the
@@ -11,6 +20,7 @@ import { Map, NavigationControl, ScaleControl } from "@vis.gl/react-maplibre";
  */
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
+import type { Building, LngLat } from "../../api/buildings";
 import { FREIBURG_CENTER, MAP_MAX_BOUNDS } from "../../lib/region";
 
 /**
@@ -22,24 +32,68 @@ import { FREIBURG_CENTER, MAP_MAX_BOUNDS } from "../../lib/region";
  */
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
-/**
- * The interactive WebGL map, restricted to Baden-Württemberg and starting
- * over Freiburg's old town. It fills its parent, which must have a height.
- *
- * Tilt and rotate with right-drag or Ctrl+drag. The compass button resets
- * the view to north-up and flat.
- */
-export function MapView() {
+const NO_FEATURES: FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
+type MapViewProps = {
+  building: Building | null | undefined;
+  onPick: (point: LngLat) => void;
+};
+
+export function MapView({ building, onPick }: MapViewProps) {
+  const selection = useMemo(
+    () => (building ? toFeatures(building) : NO_FEATURES),
+    [building],
+  );
+
   return (
     <Map
       initialViewState={{ ...FREIBURG_CENTER, zoom: 16 }}
       mapStyle={MAP_STYLE}
       maxBounds={MAP_MAX_BOUNDS}
       workerUrl={maplibreWorkerUrl}
+      cursor="pointer"
+      onClick={(event: MapLayerMouseEvent) => onPick(event.lngLat)}
       style={{ width: "100%", height: "100%" }}
     >
       <NavigationControl position="top-right" visualizePitch />
       <ScaleControl position="bottom-left" />
+      <Source id="selection" type="geojson" data={selection}>
+        <Layer
+          id="selection-roofs"
+          type="fill"
+          filter={["==", ["get", "kind"], "roof"]}
+          paint={{ "fill-color": "#f59e0b", "fill-opacity": 0.55 }}
+        />
+        <Layer
+          id="selection-outline"
+          type="line"
+          filter={["==", ["get", "kind"], "footprint"]}
+          paint={{ "line-color": "#b45309", "line-width": 3 }}
+        />
+      </Source>
     </Map>
   );
+}
+
+function toFeatures(building: Building): FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        geometry: building.footprint,
+        properties: { kind: "footprint" },
+      },
+      ...building.surfaces
+        .filter((surface) => surface.kind === "roof")
+        .map((roof) => ({
+          type: "Feature" as const,
+          geometry: roof.geometry,
+          properties: { kind: "roof", id: roof.gml_id },
+        })),
+    ],
+  };
 }

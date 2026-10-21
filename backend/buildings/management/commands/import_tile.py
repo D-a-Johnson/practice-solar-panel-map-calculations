@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from buildings.importer import import_tile
-from buildings.tiles import TileId, TileNotAvailable
+from buildings.tiles import TileDownloadFailed, TileId, TileNotAvailable
 
 
 class Command(BaseCommand):
@@ -16,7 +16,7 @@ class Command(BaseCommand):
         try:
             tile = TileId(east_km, north_km)
             result = import_tile(tile, settings.LOD2_CACHE_DIR)
-        except (ValueError, TileNotAvailable) as error:
+        except (ValueError, TileNotAvailable, TileDownloadFailed) as error:
             raise CommandError(error) from error
         self.stdout.write(
             self.style.SUCCESS(

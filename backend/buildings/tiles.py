@@ -16,10 +16,15 @@ import httpx
 from django.contrib.gis.geos import Point
 
 TILE_URL = "https://opengeodata.lgl-bw.de/data/lod2/{name}"
-DOWNLOAD_TIMEOUT_S = 60.0
+# A dead server should fail within seconds; a slow 18 MB download should not.
+DOWNLOAD_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
 class TileNotAvailable(Exception):
+    pass
+
+
+class TileDownloadFailed(Exception):
     pass
 
 
@@ -53,6 +58,14 @@ def tile_for_utm(x: float, y: float) -> TileId:
     )
 
 
+def tiles_near(x: float, y: float, margin_m: float) -> set[TileId]:
+    return {
+        tile_for_utm(x + dx, y + dy)
+        for dx in (-margin_m, 0.0, margin_m)
+        for dy in (-margin_m, 0.0, margin_m)
+    }
+
+
 def tile_for_lonlat(lon: float, lat: float) -> TileId:
     point = Point(lon, lat, srid=4326)
     point.transform(25832)
@@ -67,7 +80,7 @@ def download_tile(
         return target
     cache_dir.mkdir(parents=True, exist_ok=True)
     if client is None:
-        with httpx.Client(timeout=DOWNLOAD_TIMEOUT_S) as own_client:
+        with httpx.Client(timeout=DOWNLOAD_TIMEOUT) as own_client:
             _fetch(own_client, tile, target)
     else:
         _fetch(client, tile, target)
@@ -80,13 +93,16 @@ def _fetch(client: httpx.Client, tile: TileId, target: Path) -> None:
     download never leaves a truncated zip that looks like a cached tile.
     """
     partial = target.with_name(target.name + ".part")
-    with client.stream("GET", tile.url) as response:
-        if response.status_code == 404:
-            raise TileNotAvailable(f"LGL has no LoD2 tile {tile}")
-        response.raise_for_status()
-        with partial.open("wb") as file:
-            for chunk in response.iter_bytes():
-                file.write(chunk)
+    try:
+        with client.stream("GET", tile.url) as response:
+            if response.status_code == 404:
+                raise TileNotAvailable(f"LGL has no LoD2 tile {tile}")
+            response.raise_for_status()
+            with partial.open("wb") as file:
+                for chunk in response.iter_bytes():
+                    file.write(chunk)
+    except httpx.HTTPError as error:
+        raise TileDownloadFailed(f"Downloading tile {tile} failed: {error}") from error
     partial.replace(target)
 
 

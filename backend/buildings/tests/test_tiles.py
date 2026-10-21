@@ -5,12 +5,14 @@ import httpx
 import pytest
 
 from buildings.tiles import (
+    TileDownloadFailed,
     TileId,
     TileNotAvailable,
     download_tile,
     gml_members,
     tile_for_lonlat,
     tile_for_utm,
+    tiles_near,
 )
 
 
@@ -95,9 +97,19 @@ def test_missing_tile_raises_and_leaves_no_file(tmp_path):
 def test_server_error_raises_and_leaves_no_cached_zip(tmp_path):
     client, _ = client_answering(503)
 
-    with pytest.raises(httpx.HTTPStatusError):
+    with pytest.raises(TileDownloadFailed):
         download_tile(TileId(413, 5316), tmp_path, client)
     assert not (tmp_path / "LoD2_32_413_5316_2_bw.zip").exists()
+
+
+def test_unreachable_server_raises_download_failed(tmp_path):
+    def handler(request):
+        raise httpx.ConnectTimeout("timed out", request=request)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(TileDownloadFailed):
+        download_tile(TileId(413, 5316), tmp_path, client)
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_gml_members_lists_only_the_city_model_files(tmp_path):
@@ -119,3 +131,15 @@ def test_gml_members_lists_only_the_city_model_files(tmp_path):
 def test_tile_id_rejects_corners_that_lgl_never_uses(east, north):
     with pytest.raises(ValueError):
         TileId(east, north)
+
+
+@pytest.mark.parametrize(
+    ("x", "y", "expected"),
+    [
+        (414_000.0, 5_317_000.0, {"413_5316"}),
+        (413_020.0, 5_317_000.0, {"413_5316", "411_5316"}),
+        (414_990.0, 5_317_990.0, {"413_5316", "415_5316", "413_5318", "415_5318"}),
+    ],
+)
+def test_tiles_near_adds_neighbours_only_close_to_an_edge(x, y, expected):
+    assert {str(t) for t in tiles_near(x, y, 50.0)} == expected

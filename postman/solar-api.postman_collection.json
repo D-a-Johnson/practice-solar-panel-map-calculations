@@ -17,8 +17,13 @@
         ],
         "url": {
           "raw": "{{baseUrl}}/api/health",
-          "host": ["{{baseUrl}}"],
-          "path": ["api", "health"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "health"
+          ]
         },
         "description": "Reports whether the API is up and can query PostGIS. Answers 503 when the database is unreachable."
       },
@@ -46,6 +51,128 @@
               "",
               "pm.test(\"responds within 1 second\", () => {",
               "  pm.expect(pm.response.responseTime).to.be.below(1000);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Building at Moltkestraße 18",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/buildings/at?lon=7.843463&lat=47.994500",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "buildings",
+            "at"
+          ],
+          "query": [
+            {
+              "key": "lon",
+              "value": "7.843463"
+            },
+            {
+              "key": "lat",
+              "value": "47.994500"
+            }
+          ]
+        },
+        "description": "Imports the LoD2 tile on first use, then returns the building under the point with its roof and wall faces."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"status is 200\", () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"finds Moltkestraße 18\", () => {",
+              "  pm.expect(body.gml_id).to.eql(\"DEBW_0010007TuWn\");",
+              "  pm.expect(body.street).to.eql(\"Moltkestraße\");",
+              "  pm.expect(body.house_number).to.eql(\"18\");",
+              "});",
+              "",
+              "pm.test(\"lists the west roof face first\", () => {",
+              "  const roof = body.surfaces[0];",
+              "  pm.expect(roof.kind).to.eql(\"roof\");",
+              "  pm.expect(roof.direction).to.eql(\"W\");",
+              "  pm.expect(roof.tilt).to.be.within(39, 40);",
+              "});",
+              "",
+              "pm.test(\"footprint is GeoJSON in lon/lat\", () => {",
+              "  pm.expect(body.footprint.type).to.eql(\"MultiPolygon\");",
+              "  const [lon, lat] = body.footprint.coordinates[0][0][0];",
+              "  pm.expect(lon).to.be.within(7.8, 7.9);",
+              "  pm.expect(lat).to.be.within(47.9, 48.0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Location outside Baden-Württemberg",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/buildings/at?lon=2.35&lat=48.86",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "buildings",
+            "at"
+          ],
+          "query": [
+            {
+              "key": "lon",
+              "value": "2.35"
+            },
+            {
+              "key": "lat",
+              "value": "48.86"
+            }
+          ]
+        },
+        "description": "Paris: rejected with 400 before any tile is downloaded."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"status is 400\", () => {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"explains the reason\", () => {",
+              "  pm.expect(pm.response.json().non_field_errors[0]).to.include(\"Baden-Württemberg\");",
               "});"
             ]
           }
