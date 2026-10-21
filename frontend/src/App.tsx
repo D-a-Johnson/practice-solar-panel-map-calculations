@@ -1,3 +1,4 @@
+import { ApiStatus } from "./components/ApiStatus";
 import { MapView } from "./components/map/MapView";
 
 /**
@@ -12,6 +13,9 @@ export default function App() {
         <img src="/favicon.svg" alt="" className="size-7" />
         <h1 className="text-lg font-semibold">Solar estimator</h1>
         <span className="text-sm text-slate-500">Baden-Württemberg</span>
+        <div className="ml-auto">
+          <ApiStatus />
+        </div>
       </header>
 
       <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] md:grid-cols-[1fr_24rem] md:grid-rows-1">

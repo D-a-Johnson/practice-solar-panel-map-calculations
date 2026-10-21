@@ -3,8 +3,8 @@ name = "solar-backend"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "django>=6.1.1",
-    "djangorestframework>=3.18.1",
+    "django>=6.1.2",
+    "djangorestframework>=3.18.3",
     "psycopg[binary]>=3.3.6",
     "python-dotenv>=1.2.4",
 ]
@@ -13,7 +13,7 @@ dependencies = [
 dev = [
     "pytest>=9.1.1",
     "pytest-django>=4.14.0",
-    "ruff>=0.16.10",
+    "ruff>=0.17.1",
 ]
 
 [tool.pytest]
@@ -21,3 +21,6 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 
 [tool.ruff.lint]
 extend-select = ["I", "B", "UP", "DJ"]
+
+[tool.uv]
+exclude-newer = "1 day"
