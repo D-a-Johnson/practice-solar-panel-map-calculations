@@ -96,3 +96,5 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+LOD2_CACHE_DIR = Path(os.environ.get("LOD2_CACHE_DIR", BASE_DIR / "data" / "lod2"))
