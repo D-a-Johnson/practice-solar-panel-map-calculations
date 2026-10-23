@@ -12,6 +12,7 @@ from buildings.tiles import (
     gml_members,
     tile_for_lonlat,
     tile_for_utm,
+    tiles_in_bbox,
     tiles_near,
 )
 
@@ -143,3 +144,20 @@ def test_tile_id_rejects_corners_that_lgl_never_uses(east, north):
 )
 def test_tiles_near_adds_neighbours_only_close_to_an_edge(x, y, expected):
     assert {str(t) for t in tiles_near(x, y, 50.0)} == expected
+
+
+@pytest.mark.parametrize(
+    ("bbox", "expected"),
+    [
+        ((7.852, 47.995, 7.854, 47.996), ["413_5316"]),
+        ((7.852, 47.995, 7.865, 47.996), ["413_5316", "415_5316"]),
+    ],
+)
+def test_tiles_in_bbox_lists_every_touched_tile(bbox, expected):
+    assert [str(tile) for tile in tiles_in_bbox(*bbox)] == expected
+
+
+def test_tiles_in_bbox_covers_a_whole_city_core():
+    tiles = tiles_in_bbox(7.80, 47.97, 7.90, 48.03)
+    assert len(tiles) == 25
+    assert "413_5316" in {str(tile) for tile in tiles}

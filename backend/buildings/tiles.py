@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import Point, Polygon
 
 TILE_URL = "https://opengeodata.lgl-bw.de/data/lod2/{name}"
 # A dead server should fail within seconds; a slow 18 MB download should not.
@@ -64,6 +64,20 @@ def tiles_near(x: float, y: float, margin_m: float) -> set[TileId]:
         for dx in (-margin_m, 0.0, margin_m)
         for dy in (-margin_m, 0.0, margin_m)
     }
+
+
+def tiles_in_bbox(west: float, south: float, east: float, north: float) -> list[TileId]:
+    area = Polygon.from_bbox((west, south, east, north))
+    area.srid = 4326
+    area.transform(25832)
+    x_min, y_min, x_max, y_max = area.extent
+    first = tile_for_utm(x_min, y_min)
+    last = tile_for_utm(x_max, y_max)
+    return [
+        TileId(east_km, north_km)
+        for east_km in range(first.east_km, last.east_km + 1, 2)
+        for north_km in range(first.north_km, last.north_km + 1, 2)
+    ]
 
 
 def tile_for_lonlat(lon: float, lat: float) -> TileId:
