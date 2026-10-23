@@ -1,6 +1,8 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import type { MultiPolygon, Polygon } from "geojson";
 
+import { errorMessage } from "./http";
+
 export type LngLat = { lng: number; lat: number };
 
 export type Surface = {
@@ -39,15 +41,6 @@ export async function fetchBuildingAt({
     throw new Error(await errorMessage(response));
   }
   return (await response.json()) as Building;
-}
-
-async function errorMessage(response: Response): Promise<string> {
-  const body = await response.json().catch(() => ({}));
-  return (
-    body.detail ??
-    body.non_field_errors?.[0] ??
-    `Request failed (HTTP ${response.status})`
-  );
 }
 
 export function useBuildingAt(point: LngLat | null) {

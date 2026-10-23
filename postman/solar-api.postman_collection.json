@@ -129,7 +129,7 @@
       "response": []
     },
     {
-      "name": "Location outside Baden-Württemberg",
+      "name": "Yield estimate, west roof of Moltkestraße 18",
       "request": {
         "method": "GET",
         "header": [
@@ -139,27 +139,38 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/buildings/at?lon=2.35&lat=48.86",
+          "raw": "{{baseUrl}}/api/estimates?lat=47.9945&lon=7.843463&tilt=39.3&azimuth=280.1&peak_power_kwp=4.4",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
             "api",
-            "buildings",
-            "at"
+            "estimates"
           ],
           "query": [
             {
-              "key": "lon",
-              "value": "2.35"
+              "key": "lat",
+              "value": "47.9945"
             },
             {
-              "key": "lat",
-              "value": "48.86"
+              "key": "lon",
+              "value": "7.843463"
+            },
+            {
+              "key": "tilt",
+              "value": "39.3"
+            },
+            {
+              "key": "azimuth",
+              "value": "280.1"
+            },
+            {
+              "key": "peak_power_kwp",
+              "value": "4.4"
             }
           ]
         },
-        "description": "Paris: rejected with 400 before any tile is downloaded."
+        "description": "PVGIS yield for 4.4 kWp on a 39° west-facing roof. The first call asks PVGIS; later calls come from the cache."
       },
       "event": [
         {
@@ -167,12 +178,21 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test(\"status is 400\", () => {",
-              "  pm.response.to.have.status(400);",
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"status is 200\", () => {",
+              "  pm.response.to.have.status(200);",
               "});",
               "",
-              "pm.test(\"explains the reason\", () => {",
-              "  pm.expect(pm.response.json().non_field_errors[0]).to.include(\"Baden-Württemberg\");",
+              "pm.test(\"has twelve months that add up to the year\", () => {",
+              "  pm.expect(body.monthly_kwh).to.have.lengthOf(12);",
+              "  const sum = body.monthly_kwh.reduce((a, b) => a + b, 0);",
+              "  pm.expect(sum).to.be.closeTo(body.annual_kwh, 5);",
+              "});",
+              "",
+              "pm.test(\"yield is plausible for a west roof in Freiburg\", () => {",
+              "  pm.expect(body.specific_yield_kwh_per_kwp).to.be.within(750, 850);",
+              "  pm.expect(body.annual_kwh).to.be.closeTo(body.specific_yield_kwh_per_kwp * 4.4, 0.01);",
               "});"
             ]
           }
