@@ -28,6 +28,11 @@ export type Building = {
   surfaces: Surface[];
 };
 
+/** Roof faces, largest first (the API sorts surfaces by kind, then area). */
+export function roofsOf(building: Building): Surface[] {
+  return building.surfaces.filter((surface) => surface.kind === "roof");
+}
+
 export async function fetchBuildingAt({
   lng,
   lat,

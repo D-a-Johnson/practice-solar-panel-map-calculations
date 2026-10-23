@@ -39,11 +39,11 @@ def test_building_parts_share_one_footprint(cache_dir):
 
 
 @pytest.mark.django_db
-def test_surfaces_are_roofs_and_walls_with_precomputed_orientation(cache_dir):
+def test_surfaces_are_roofs_with_precomputed_orientation(cache_dir):
     import_tile(TILE, cache_dir)
 
     house = Surface.objects.filter(building__gml_id="DEBW_0010007TuWn")
-    assert house.filter(kind="wall").count() == 10
+    assert not Surface.objects.filter(kind="wall").exists()
     roofs = sorted(house.filter(kind="roof"), key=lambda r: r.azimuth)
     assert [round(r.azimuth, 1) for r in roofs] == [100.1, 280.1]
     assert all(r.roof_type == "3100" for r in roofs)

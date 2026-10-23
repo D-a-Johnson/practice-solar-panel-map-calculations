@@ -26,7 +26,7 @@ def test_simple_building_attributes(buildings):
     assert house.function == "31001_1123"
     assert house.measured_height == pytest.approx(16.552)
     assert house.addresses == (Address("Moltkestraße", "18", "Freiburg im Breisgau"),)
-    assert kinds(house) == {"wall": 10, "roof": 2, "ground": 1}
+    assert kinds(house) == {"roof": 2, "ground": 1}
     assert {s.roof_type for s in house.surfaces} == {"3100"}
 
 
@@ -50,15 +50,17 @@ def test_parsed_roof_faces_have_the_expected_orientation(buildings):
 def test_building_parts_are_merged_and_keep_their_own_roof_type(buildings):
     house = buildings["DEBW_0010007Tw9I"]
     assert house.measured_height == pytest.approx(15.343)
-    assert kinds(house) == {"wall": 11, "roof": 5, "ground": 2}
+    assert kinds(house) == {"roof": 5, "ground": 2}
     roof_types = Counter(s.roof_type for s in house.surfaces if s.kind == "roof")
     assert roof_types == {"3100": 2, "5000": 3}
 
 
-def test_closure_surfaces_are_left_out():
-    assert "ClosureSurface" in FIXTURE.read_text(encoding="utf-8")
+def test_closure_and_wall_surfaces_are_left_out():
+    text = FIXTURE.read_text(encoding="utf-8")
+    assert "ClosureSurface" in text
+    assert "WallSurface" in text
     for building in parse_city_model(FIXTURE):
-        assert {s.kind for s in building.surfaces} <= {"roof", "wall", "ground"}
+        assert {s.kind for s in building.surfaces} <= {"roof", "ground"}
 
 
 def test_rings_are_3d_and_closed(buildings):
@@ -136,4 +138,4 @@ def test_real_tile_matches_the_independent_inspection():
             buildings = list(parse_city_model(file))
     polygons = Counter(s.kind for b in buildings for s in b.surfaces)
     assert len(buildings) == 1633
-    assert polygons == {"wall": 22354, "roof": 4885, "ground": 2570}
+    assert polygons == {"roof": 4885, "ground": 2570}

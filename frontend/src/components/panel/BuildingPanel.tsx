@@ -1,16 +1,24 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 
-import type { Building, LngLat, Surface } from "../../api/buildings";
-import { type EstimateInput, useEstimate } from "../../api/estimates";
-import { MonthlyChart } from "./MonthlyChart";
+import { type Building, type LngLat, roofsOf } from "../../api/buildings";
+import { isFlat } from "../../lib/setup";
+import { FaceSetup } from "./FaceSetup";
+import { Hint } from "./Hint";
 
 type BuildingPanelProps = {
   picked: LngLat | null;
   query: UseQueryResult<Building | null>;
+  selectedFaceId: string | null;
+  onSelectFace: (faceId: string) => void;
 };
 
-export function BuildingPanel({ picked, query }: BuildingPanelProps) {
+export function BuildingPanel({
+  picked,
+  query,
+  selectedFaceId,
+  onSelectFace,
+}: BuildingPanelProps) {
   if (!picked) {
     return <Hint>Click a building on the map to start.</Hint>;
   }
@@ -28,34 +36,30 @@ export function BuildingPanel({ picked, query }: BuildingPanelProps) {
       key={query.data.gml_id}
       building={query.data}
       location={picked}
+      selectedFaceId={selectedFaceId}
+      onSelectFace={onSelectFace}
     />
   );
 }
 
+type BuildingDetailsProps = {
+  building: Building;
+  location: LngLat;
+  selectedFaceId: string | null;
+  onSelectFace: (faceId: string) => void;
+};
+
 function BuildingDetails({
   building,
   location,
-}: {
-  building: Building;
-  location: LngLat;
-}) {
-  const roofs = building.surfaces.filter((surface) => surface.kind === "roof");
-  const [selectedId, setSelectedId] = useState(roofs[0]?.gml_id);
+  selectedFaceId,
+  onSelectFace,
+}: BuildingDetailsProps) {
+  const roofs = roofsOf(building);
+  const selected = roofs.find((roof) => roof.gml_id === selectedFaceId);
   const [panels, setPanels] = useState(10);
   const [wattsPerPanel, setWattsPerPanel] = useState(440);
-
-  const selected = roofs.find((roof) => roof.gml_id === selectedId);
   const peakPowerKwp = (panels * wattsPerPanel) / 1000;
-  const input: EstimateInput | null =
-    selected && peakPowerKwp >= 0.1
-      ? {
-          lat: location.lat,
-          lon: location.lng,
-          tilt: selected.tilt,
-          azimuth: selected.azimuth ?? 180,
-          peak_power_kwp: peakPowerKwp,
-        }
-      : null;
 
   return (
     <div>
@@ -74,12 +78,14 @@ function BuildingDetails({
           <li key={roof.gml_id}>
             <button
               type="button"
-              aria-pressed={roof.gml_id === selectedId}
-              onClick={() => setSelectedId(roof.gml_id)}
+              aria-pressed={roof.gml_id === selectedFaceId}
+              onClick={() => onSelectFace(roof.gml_id)}
               className="flex w-full justify-between rounded px-2 py-1.5 text-left hover:bg-slate-100 aria-pressed:bg-amber-100"
             >
-              <span>{roof.direction ?? "flat"}</span>
-              <span className="text-slate-600">{faceSummary(roof)}</span>
+              <span>{isFlat(roof) ? "flat" : roof.direction}</span>
+              <span className="text-slate-600">
+                {roof.tilt.toFixed(0)}° · {roof.area.toFixed(0)} m²
+              </span>
             </button>
           </li>
         ))}
@@ -106,46 +112,15 @@ function BuildingDetails({
               = {peakPowerKwp.toFixed(2)} kWp
             </span>
           </div>
-          {selected.azimuth === null && (
-            <p className="mt-1 text-xs text-slate-500">
-              Flat face: calculated facing south.
-            </p>
-          )}
-          <EstimateResult input={input} />
+          <FaceSetup
+            key={selected.gml_id}
+            face={selected}
+            location={location}
+            peakPowerKwp={peakPowerKwp}
+          />
         </>
       )}
     </div>
-  );
-}
-
-function EstimateResult({ input }: { input: EstimateInput | null }) {
-  const estimate = useEstimate(input);
-
-  if (!input) {
-    return <Hint>Enter at least 0.1 kWp.</Hint>;
-  }
-  if (estimate.isPending) {
-    return <Hint>Calculating yield…</Hint>;
-  }
-  if (estimate.isError) {
-    return <Hint>{estimate.error.message}</Hint>;
-  }
-
-  const result = estimate.data;
-  return (
-    <section aria-label="Yield estimate" className="mt-4">
-      <p className="text-2xl font-semibold">
-        {Math.round(result.annual_kwh).toLocaleString("en")} kWh
-        <span className="text-base font-normal text-slate-600"> per year</span>
-      </p>
-      <p className="text-sm text-slate-600">
-        {Math.round(result.specific_yield_kwh_per_kwp)} kWh per kWp
-      </p>
-      <MonthlyChart values={result.monthly_kwh} />
-      <p className="mt-2 text-xs text-slate-500">
-        Source: PVGIS © European Union
-      </p>
-    </section>
   );
 }
 
@@ -174,15 +149,7 @@ function NumberInput({
   );
 }
 
-function faceSummary(roof: Surface): string {
-  return `${roof.tilt.toFixed(0)}° · ${roof.area.toFixed(0)} m²`;
-}
-
 function title(building: Building): string {
   const address = `${building.street} ${building.house_number}`.trim();
   return building.name || address || "Building without address";
-}
-
-function Hint({ children }: { children: ReactNode }) {
-  return <p className="mt-2 text-sm text-slate-600">{children}</p>;
 }

@@ -17,14 +17,15 @@ from lxml import etree
 from buildings.geometry import Point
 from buildings.tiles import gml_members
 
-type SurfaceKind = Literal["roof", "wall", "ground"]
+type SurfaceKind = Literal["roof", "ground"]
 type Ring = tuple[Point, ...]
 
-# ClosureSurfaces are left out on purpose: they are virtual faces that seal
-# a solid where building parts meet, not real roofs or walls.
+# ClosureSurfaces are virtual faces that seal a solid where building parts
+# meet, so they are never read. WallSurfaces are skipped until a feature
+# uses them: they are about 80% of all faces and would more than double the
+# import time of a tile.
 SURFACE_KINDS: dict[str, SurfaceKind] = {
     "RoofSurface": "roof",
-    "WallSurface": "wall",
     "GroundSurface": "ground",
 }
 

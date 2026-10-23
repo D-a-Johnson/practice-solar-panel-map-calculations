@@ -9,7 +9,6 @@ WEST_ROOF = {
     "lon": 7.84346,
     "tilt": 39.3,
     "azimuth": 280.1,
-    "peak_power_kwp": 4.4,
 }
 MONTHLY = (20, 35, 60, 80, 95, 100, 105, 95, 70, 50, 25, 15)
 
@@ -27,12 +26,11 @@ def fake_pvgis(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_scales_the_one_kwp_yield_to_the_system_size(client, fake_pvgis):
+def test_returns_the_yield_per_kwp(client, fake_pvgis):
     body = client.get(URL, WEST_ROOF).json()
 
-    assert body["specific_yield_kwh_per_kwp"] == pytest.approx(750)
-    assert body["annual_kwh"] == pytest.approx(750 * 4.4)
-    assert body["monthly_kwh"][6] == pytest.approx(105 * 4.4)
+    assert body["annual_kwh_per_kwp"] == pytest.approx(750)
+    assert body["monthly_kwh_per_kwp"] == pytest.approx(list(MONTHLY))
 
 
 @pytest.mark.django_db
@@ -44,7 +42,7 @@ def test_asks_pvgis_with_rounded_inputs_and_south_based_aspect(client, fake_pvgi
 @pytest.mark.django_db
 def test_nearby_requests_reuse_the_cached_result(client, fake_pvgis):
     client.get(URL, WEST_ROOF)
-    client.get(URL, {**WEST_ROOF, "tilt": 39.4, "lat": 47.99452, "peak_power_kwp": 10})
+    client.get(URL, {**WEST_ROOF, "tilt": 39.4, "lat": 47.99452})
     assert len(fake_pvgis) == 1
 
 
@@ -59,7 +57,7 @@ def test_pvgis_outage_answers_503(client, monkeypatch):
 
 @pytest.mark.parametrize(
     "change",
-    [{"tilt": 95}, {"azimuth": -1}, {"peak_power_kwp": 0}, {"lon": 2.35, "lat": 48.86}],
+    [{"tilt": 95}, {"azimuth": -1}, {"lon": 2.35, "lat": 48.86}],
 )
 def test_invalid_inputs_are_rejected(client, change):
     assert client.get(URL, {**WEST_ROOF, **change}).status_code == 400

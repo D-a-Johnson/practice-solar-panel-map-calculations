@@ -88,12 +88,12 @@ def _building_row(tile: Tile, parsed: ParsedBuilding) -> Building:
 def _surface_rows(building: Building, parsed: Iterable[ParsedSurface]) -> list[Surface]:
     rows = []
     for surface in parsed:
-        if surface.kind == "ground":
+        if surface.kind != "roof":
             continue
         face_area = area(surface.exterior, surface.holes)
         if face_area < MIN_SURFACE_AREA_M2:
             continue
-        facing = orientation(surface.exterior, facing_up=surface.kind == "roof")
+        facing = orientation(surface.exterior, facing_up=True)
         rows.append(
             Surface(
                 building=building,

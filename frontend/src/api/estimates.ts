@@ -2,36 +2,35 @@ import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
 
 import { errorMessage } from "./http";
 
-export type EstimateInput = {
+export type YieldQuery = {
   lat: number;
   lon: number;
   tilt: number;
   azimuth: number;
-  peak_power_kwp: number;
 };
 
-export type Estimate = {
-  peak_power_kwp: number;
-  annual_kwh: number;
-  monthly_kwh: number[];
-  specific_yield_kwh_per_kwp: number;
+export type YieldPerKwp = {
+  annual_kwh_per_kwp: number;
+  monthly_kwh_per_kwp: number[];
 };
 
-export async function fetchEstimate(input: EstimateInput): Promise<Estimate> {
+export async function fetchYieldPerKwp(
+  query: YieldQuery,
+): Promise<YieldPerKwp> {
   const params = new URLSearchParams(
-    Object.entries(input).map(([key, value]) => [key, String(value)]),
+    Object.entries(query).map(([key, value]) => [key, String(value)]),
   );
   const response = await fetch(`/api/estimates?${params}`);
   if (!response.ok) {
     throw new Error(await errorMessage(response));
   }
-  return (await response.json()) as Estimate;
+  return (await response.json()) as YieldPerKwp;
 }
 
-export function useEstimate(input: EstimateInput | null) {
+export function useYieldPerKwp(query: YieldQuery | null) {
   return useQuery({
-    queryKey: ["estimate", input],
-    queryFn: input ? () => fetchEstimate(input) : skipToken,
+    queryKey: ["yield-per-kwp", query],
+    queryFn: query ? () => fetchYieldPerKwp(query) : skipToken,
     staleTime: Infinity,
     retry: false,
     placeholderData: keepPreviousData,

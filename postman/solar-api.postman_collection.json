@@ -129,7 +129,7 @@
       "response": []
     },
     {
-      "name": "Yield estimate, west roof of Moltkestraße 18",
+      "name": "Yield per kWp, west roof of Moltkestraße 18",
       "request": {
         "method": "GET",
         "header": [
@@ -139,7 +139,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/api/estimates?lat=47.9945&lon=7.843463&tilt=39.3&azimuth=280.1&peak_power_kwp=4.4",
+          "raw": "{{baseUrl}}/api/estimates?lat=47.9945&lon=7.843463&tilt=39.3&azimuth=280.1",
           "host": [
             "{{baseUrl}}"
           ],
@@ -163,14 +163,10 @@
             {
               "key": "azimuth",
               "value": "280.1"
-            },
-            {
-              "key": "peak_power_kwp",
-              "value": "4.4"
             }
           ]
         },
-        "description": "PVGIS yield for 4.4 kWp on a 39° west-facing roof. The first call asks PVGIS; later calls come from the cache."
+        "description": "PVGIS yield for 1 kWp on a 39° west-facing roof; clients multiply by their own kWp. The first call asks PVGIS, later calls come from the cache."
       },
       "event": [
         {
@@ -185,14 +181,13 @@
               "});",
               "",
               "pm.test(\"has twelve months that add up to the year\", () => {",
-              "  pm.expect(body.monthly_kwh).to.have.lengthOf(12);",
-              "  const sum = body.monthly_kwh.reduce((a, b) => a + b, 0);",
-              "  pm.expect(sum).to.be.closeTo(body.annual_kwh, 5);",
+              "  pm.expect(body.monthly_kwh_per_kwp).to.have.lengthOf(12);",
+              "  const sum = body.monthly_kwh_per_kwp.reduce((a, b) => a + b, 0);",
+              "  pm.expect(sum).to.be.closeTo(body.annual_kwh_per_kwp, 2);",
               "});",
               "",
               "pm.test(\"yield is plausible for a west roof in Freiburg\", () => {",
-              "  pm.expect(body.specific_yield_kwh_per_kwp).to.be.within(750, 850);",
-              "  pm.expect(body.annual_kwh).to.be.closeTo(body.specific_yield_kwh_per_kwp * 4.4, 0.01);",
+              "  pm.expect(body.annual_kwh_per_kwp).to.be.within(750, 850);",
               "});"
             ]
           }

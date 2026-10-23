@@ -20,7 +20,7 @@ import { useMemo } from "react";
  */
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
-import type { Building, LngLat } from "../../api/buildings";
+import { type Building, type LngLat, roofsOf } from "../../api/buildings";
 import { FREIBURG_CENTER, MAP_MAX_BOUNDS } from "../../lib/region";
 
 /**
@@ -39,13 +39,14 @@ const NO_FEATURES: FeatureCollection = {
 
 type MapViewProps = {
   building: Building | null | undefined;
+  selectedFaceId: string | null;
   onPick: (point: LngLat) => void;
 };
 
-export function MapView({ building, onPick }: MapViewProps) {
+export function MapView({ building, selectedFaceId, onPick }: MapViewProps) {
   const selection = useMemo(
-    () => (building ? toFeatures(building) : NO_FEATURES),
-    [building],
+    () => (building ? toFeatures(building, selectedFaceId) : NO_FEATURES),
+    [building, selectedFaceId],
   );
 
   return (
@@ -65,7 +66,10 @@ export function MapView({ building, onPick }: MapViewProps) {
           id="selection-roofs"
           type="fill"
           filter={["==", ["get", "kind"], "roof"]}
-          paint={{ "fill-color": "#f59e0b", "fill-opacity": 0.55 }}
+          paint={{
+            "fill-color": ["case", ["get", "selected"], "#c2410c", "#f59e0b"],
+            "fill-opacity": ["case", ["get", "selected"], 0.8, 0.45],
+          }}
         />
         <Layer
           id="selection-outline"
@@ -78,7 +82,10 @@ export function MapView({ building, onPick }: MapViewProps) {
   );
 }
 
-function toFeatures(building: Building): FeatureCollection {
+function toFeatures(
+  building: Building,
+  selectedFaceId: string | null,
+): FeatureCollection {
   return {
     type: "FeatureCollection",
     features: [
@@ -87,13 +94,11 @@ function toFeatures(building: Building): FeatureCollection {
         geometry: building.footprint,
         properties: { kind: "footprint" },
       },
-      ...building.surfaces
-        .filter((surface) => surface.kind === "roof")
-        .map((roof) => ({
-          type: "Feature" as const,
-          geometry: roof.geometry,
-          properties: { kind: "roof", id: roof.gml_id },
-        })),
+      ...roofsOf(building).map((roof) => ({
+        type: "Feature" as const,
+        geometry: roof.geometry,
+        properties: { kind: "roof", selected: roof.gml_id === selectedFaceId },
+      })),
     ],
   };
 }

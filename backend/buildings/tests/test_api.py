@@ -56,17 +56,26 @@ def test_returns_the_building_under_the_click(client, lod2_cache):
 
 
 @pytest.mark.django_db
-def test_surfaces_list_roofs_first_with_direction_and_3d_geometry(client, lod2_cache):
+def test_surfaces_are_roofs_largest_first_with_direction_and_3d_geometry(
+    client, lod2_cache
+):
     surfaces = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()["surfaces"]
 
-    roofs = surfaces[:2]
-    assert [(s["kind"], s["direction"]) for s in roofs] == [
+    assert [(s["kind"], s["direction"]) for s in surfaces] == [
         ("roof", "W"),
         ("roof", "E"),
     ]
-    assert {s["kind"] for s in surfaces[2:]} == {"wall"}
-    assert roofs[0]["area"] == pytest.approx(68.1, abs=0.05)
-    assert len(roofs[0]["geometry"]["coordinates"][0][0]) == 3
+    assert surfaces[0]["area"] == pytest.approx(68.1, abs=0.05)
+    assert len(surfaces[0]["geometry"]["coordinates"][0][0]) == 3
+
+
+@pytest.mark.django_db
+def test_coordinates_are_rounded_to_seven_decimals(client, lod2_cache):
+    body = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()
+    lon, lat = body["footprint"]["coordinates"][0][0][0]
+    roof_lon = body["surfaces"][0]["geometry"]["coordinates"][0][0][0]
+    for value in (lon, lat, roof_lon):
+        assert value == round(value, 7)
 
 
 @pytest.mark.django_db

@@ -21,6 +21,11 @@ export function useHealth() {
   return useQuery({
     queryKey: ["health"],
     queryFn: fetchHealth,
-    refetchInterval: 30_000,
+    /**
+     * Live re-checking helps while developing. In production every open tab
+     * would ask the server every 30 s for a developer indicator, so the badge
+     * shows the first check only.
+     */
+    refetchInterval: import.meta.env.DEV ? 30_000 : false,
   });
 }
