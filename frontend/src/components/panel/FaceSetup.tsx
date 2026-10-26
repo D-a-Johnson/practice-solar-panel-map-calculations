@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { LngLat, Surface } from "../../api/buildings";
+import type { Face, LngLat } from "../../api/buildings";
 import {
   COMPASS,
   defaultMounting,
@@ -24,7 +24,7 @@ const SLIDER_SETTLE_MS = 300;
 
 type FaceSetupProps = {
   building: string;
-  face: Surface;
+  face: Face;
   location: LngLat;
   peakPowerKwp: number;
 };
@@ -44,17 +44,23 @@ export function FaceSetup({
     tilt: settledTilt,
   });
 
-  const options: { value: Mounting; label: string }[] = [
-    {
-      value: "flush",
-      label: t.setup.flush(
-        face.tilt,
-        isFlat(face) || !face.direction ? null : t.directions[face.direction],
-      ),
-    },
-    { value: "stands", label: t.setup.stands(STAND_TILT) },
-    { value: "custom", label: t.setup.custom },
-  ];
+  const options: { value: Mounting; label: string }[] =
+    face.kind === "wall"
+      ? [
+          { value: "flush", label: t.setup.wall(faceName(face, t)) },
+          { value: "custom", label: t.setup.custom },
+        ]
+      : [
+          {
+            value: "flush",
+            label: t.setup.flush(
+              face.tilt,
+              isFlat(face) ? null : faceName(face, t),
+            ),
+          },
+          { value: "stands", label: t.setup.stands(STAND_TILT) },
+          { value: "custom", label: t.setup.custom },
+        ];
 
   return (
     <>
@@ -81,7 +87,12 @@ export function FaceSetup({
       <EstimateResult
         subject={{
           building,
-          face: `${faceName(face, t)}, ${t.building.face(face.tilt, face.area)}`,
+          faceLabel: face.kind === "wall" ? t.report.wall : t.report.roofFace,
+          face: `${faceName(face, t)}, ${
+            face.kind === "wall"
+              ? t.building.wallWidth(face.width)
+              : t.building.face(face.tilt, face.area)
+          }`,
         }}
         query={{ lat: location.lat, lon: location.lng, ...orientation }}
         peakPowerKwp={peakPowerKwp}

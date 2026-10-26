@@ -1,8 +1,11 @@
 import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON, Transform
+from django.contrib.gis.gdal import CoordTransform, SpatialReference
+from django.contrib.gis.geos import LineString
 from rest_framework import serializers
 
+from buildings.facades import facades
 from buildings.geometry import direction_label
 from buildings.models import Building, Surface
 
@@ -13,6 +16,9 @@ BW_BBOX = (7.5117, 47.5324, 10.4956, 49.7913)
 # Seven decimals of a degree are about 1 cm: plenty for drawing on a map,
 # and a quarter smaller than full precision.
 GEOJSON_DECIMALS = 7
+
+# LoD2 walls are vertical (see facades.py).
+WALL_TILT = 90.0
 
 
 def wgs84_geojson(field: str) -> AsGeoJSON:
@@ -65,6 +71,7 @@ class BuildingSerializer(serializers.ModelSerializer):
 
     footprint = serializers.SerializerMethodField()
     surfaces = serializers.SerializerMethodField()
+    walls = serializers.SerializerMethodField()
 
     class Meta:
         model = Building
@@ -78,6 +85,7 @@ class BuildingSerializer(serializers.ModelSerializer):
             "locality",
             "footprint",
             "surfaces",
+            "walls",
         )
 
     def get_footprint(self, building: Building) -> dict:
@@ -94,3 +102,30 @@ class BuildingSerializer(serializers.ModelSerializer):
             geojson=wgs84_geojson("geometry")
         )
         return SurfaceSerializer(surfaces, many=True).data
+
+    def get_walls(self, building: Building) -> list:
+        to_wgs84 = CoordTransform(
+            SpatialReference(building.footprint.srid), SpatialReference(4326)
+        )
+        walls = []
+        for number, facade in enumerate(facades(building.footprint), start=1):
+            line = LineString(facade.start, facade.end, srid=building.footprint.srid)
+            line.transform(to_wgs84)
+            walls.append(
+                {
+                    "id": f"wall-{number}",
+                    "kind": "wall",
+                    "tilt": WALL_TILT,
+                    "azimuth": facade.azimuth,
+                    "direction": direction_label(facade.azimuth),
+                    "width": facade.width,
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [round(lon, GEOJSON_DECIMALS), round(lat, GEOJSON_DECIMALS)]
+                            for lon, lat in line.coords
+                        ],
+                    },
+                }
+            )
+        return walls

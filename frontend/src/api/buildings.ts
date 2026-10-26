@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
-import type { MultiPolygon, Polygon } from "geojson";
+import type { LineString, MultiPolygon, Polygon } from "geojson";
 
 import { ApiError } from "./http";
 
@@ -9,7 +9,7 @@ export type Direction = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
 
 export type Surface = {
   gml_id: string;
-  kind: "roof" | "wall";
+  kind: "roof";
   roof_type: string;
   area: number;
   tilt: number;
@@ -17,6 +17,19 @@ export type Surface = {
   direction: Direction | null;
   geometry: Polygon;
 };
+
+/** A facade from the building's footprint, for balcony and wall panels. */
+export type Wall = {
+  id: string;
+  kind: "wall";
+  tilt: number;
+  azimuth: number;
+  direction: Direction;
+  width: number;
+  geometry: LineString;
+};
+
+export type Face = Surface | Wall;
 
 export type Building = {
   gml_id: string;
@@ -27,12 +40,14 @@ export type Building = {
   house_number: string;
   locality: string;
   footprint: MultiPolygon;
+  /** Roof faces only (walls aren't imported), largest first. */
   surfaces: Surface[];
+  /** Widest first. */
+  walls: Wall[];
 };
 
-/** Roof faces, largest first (the API sorts surfaces by kind, then area). */
-export function roofsOf(building: Building): Surface[] {
-  return building.surfaces.filter((surface) => surface.kind === "roof");
+export function faceId(face: Face): string {
+  return face.kind === "roof" ? face.gml_id : face.id;
 }
 
 export async function fetchBuildingAt({

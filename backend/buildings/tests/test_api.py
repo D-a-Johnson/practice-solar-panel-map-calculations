@@ -70,6 +70,20 @@ def test_surfaces_are_roofs_largest_first_with_direction_and_3d_geometry(
 
 
 @pytest.mark.django_db
+def test_walls_come_from_the_footprint_widest_first_as_lon_lat_lines(
+    client, lod2_cache
+):
+    walls = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()["walls"]
+
+    assert [wall["direction"] for wall in walls] == ["S", "N", "W", "E"]
+    assert {(wall["kind"], wall["tilt"]) for wall in walls} == {("wall", 90.0)}
+    assert walls[0]["width"] == pytest.approx(10.4, abs=0.05)
+    (lon, lat), _ = walls[0]["geometry"]["coordinates"]
+    assert (round(lon, 2), round(lat, 2)) == (7.84, 47.99)
+    assert lon == round(lon, 7)
+
+
+@pytest.mark.django_db
 def test_coordinates_are_rounded_to_seven_decimals(client, lod2_cache):
     body = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()
     lon, lat = body["footprint"]["coordinates"][0][0][0]

@@ -89,7 +89,7 @@
             }
           ]
         },
-        "description": "Imports the LoD2 tile on first use, then returns the building under the point with its roof and wall faces."
+        "description": "Imports the LoD2 tile on first use, then returns the building under the point with its roof faces and the walls taken from its footprint."
       },
       "event": [
         {
@@ -121,6 +121,11 @@
               "  const [lon, lat] = body.footprint.coordinates[0][0][0];",
               "  pm.expect(lon).to.be.within(7.8, 7.9);",
               "  pm.expect(lat).to.be.within(47.9, 48.0);",
+              "});",
+              "",
+              "pm.test(\"lists its walls for balcony panels, widest first\", () => {",
+              "  pm.expect(body.walls.map((wall) => wall.direction)).to.eql([\"S\", \"N\", \"W\", \"E\"]);",
+              "  pm.expect(body.walls[0].tilt).to.eql(90);",
               "});"
             ]
           }

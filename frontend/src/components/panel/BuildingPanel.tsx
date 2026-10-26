@@ -1,10 +1,15 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { type Building, type LngLat, roofsOf } from "../../api/buildings";
+import {
+  type Building,
+  type Face,
+  faceId,
+  type LngLat,
+} from "../../api/buildings";
 import { statusOf } from "../../api/http";
 import { useI18n } from "../../i18n/language";
-import { faceName } from "../../lib/setup";
+import { DEFAULT_PANELS, faceName } from "../../lib/setup";
 import { FaceSetup } from "./FaceSetup";
 import { Hint } from "./Hint";
 import { NumberInput } from "./NumberInput";
@@ -70,12 +75,24 @@ function BuildingDetails({
   onSelectFace,
 }: BuildingDetailsProps) {
   const { t } = useI18n();
-  const roofs = roofsOf(building);
   const name = title(building) || t.building.withoutAddress;
-  const selected = roofs.find((roof) => roof.gml_id === selectedFaceId);
-  const [panels, setPanels] = useState(10);
+  const selected = [...building.surfaces, ...building.walls].find(
+    (face) => faceId(face) === selectedFaceId,
+  );
+  const [panels, setPanels] = useState<number>(DEFAULT_PANELS.roof);
   const [wattsPerPanel, setWattsPerPanel] = useState(440);
   const peakPowerKwp = (panels * wattsPerPanel) / 1000;
+
+  /**
+   * Switching between a roof and a wall starts from that kind's panel
+   * count; switching within a kind keeps what the user typed.
+   */
+  function choose(face: Face) {
+    if (selected && face.kind !== selected.kind) {
+      setPanels(DEFAULT_PANELS[face.kind]);
+    }
+    onSelectFace(faceId(face));
+  }
 
   return (
     <div>
@@ -86,26 +103,22 @@ function BuildingDetails({
           ` · ${t.building.height(building.measured_height)}`}
       </p>
 
-      <h3 className="mt-4 text-sm font-semibold">
-        {t.building.roofFaces(roofs.length)}
-      </h3>
-      <ul className="mt-2 max-h-48 overflow-y-auto text-sm">
-        {roofs.map((roof) => (
-          <li key={roof.gml_id}>
-            <button
-              type="button"
-              aria-pressed={roof.gml_id === selectedFaceId}
-              onClick={() => onSelectFace(roof.gml_id)}
-              className="flex w-full justify-between rounded px-2 py-1.5 text-left hover:bg-slate-100 aria-pressed:bg-amber-100"
-            >
-              <span>{faceName(roof, t)}</span>
-              <span className="text-slate-600">
-                {t.building.face(roof.tilt, roof.area)}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <FaceList
+        title={t.building.roofFaces(building.surfaces.length)}
+        faces={building.surfaces}
+        detail={(roof) => t.building.face(roof.tilt, roof.area)}
+        selectedFaceId={selectedFaceId}
+        onChoose={choose}
+      />
+      {building.walls.length > 0 && (
+        <FaceList
+          title={t.building.walls(building.walls.length)}
+          faces={building.walls}
+          detail={(wall) => t.building.wallWidth(wall.width)}
+          selectedFaceId={selectedFaceId}
+          onChoose={choose}
+        />
+      )}
 
       {selected && (
         <>
@@ -129,7 +142,7 @@ function BuildingDetails({
             </span>
           </div>
           <FaceSetup
-            key={selected.gml_id}
+            key={faceId(selected)}
             building={[name, building.locality].filter(Boolean).join(", ")}
             face={selected}
             location={location}
@@ -138,6 +151,45 @@ function BuildingDetails({
         </>
       )}
     </div>
+  );
+}
+
+type FaceListProps<F extends Face> = {
+  title: string;
+  faces: F[];
+  detail: (face: F) => string;
+  selectedFaceId: string | null;
+  onChoose: (face: F) => void;
+};
+
+function FaceList<F extends Face>({
+  title,
+  faces,
+  detail,
+  selectedFaceId,
+  onChoose,
+}: FaceListProps<F>) {
+  const { t } = useI18n();
+
+  return (
+    <>
+      <h3 className="mt-4 text-sm font-semibold">{title}</h3>
+      <ul className="mt-2 max-h-48 overflow-y-auto text-sm">
+        {faces.map((face) => (
+          <li key={faceId(face)}>
+            <button
+              type="button"
+              aria-pressed={faceId(face) === selectedFaceId}
+              onClick={() => onChoose(face)}
+              className="flex w-full justify-between rounded px-2 py-1.5 text-left hover:bg-slate-100 aria-pressed:bg-amber-100"
+            >
+              <span>{faceName(face, t)}</span>
+              <span className="text-slate-600">{detail(face)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

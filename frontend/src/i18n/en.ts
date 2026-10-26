@@ -41,6 +41,8 @@ export const en = {
     height: (metres: number) => `${number(metres, 1)} m high`,
     roofFaces: (count: number) => `Roof faces (${count})`,
     flat: "flat",
+    walls: (count: number) => `Walls for balcony panels (${count})`,
+    wallWidth: (width: number) => `${number(width)} m wide`,
     face: (tilt: number, area: number) =>
       `${number(tilt)}° · ${number(area)} m²`,
   },
@@ -65,6 +67,7 @@ export const en = {
         ? `Flush on the roof (${number(tilt)}° ${direction})`
         : `Flush on the roof (${number(tilt)}°, flat)`,
     stands: (tilt: number) => `On stands, ${tilt}° facing south`,
+    wall: (direction: string) => `On the railing or wall (90° ${direction})`,
     custom: "Custom tilt and direction",
     tilt: (degrees: number) => `Tilt ${degrees}°`,
     direction: "Direction",
@@ -145,6 +148,7 @@ export const en = {
     created: (day: Date) => `Created on ${date(day)}`,
     building: "Building",
     roofFace: "Roof face",
+    wall: "Wall",
     location: "Location",
     coordinates: (lat: number, lon: number) =>
       `${number(lat, 5)}° N, ${number(lon, 5)}° E`,

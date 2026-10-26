@@ -8,7 +8,11 @@ import { useAssumptions } from "../../lib/assumptionsContext";
 import type { Economics } from "../../lib/economics";
 import { yieldCsv } from "../../lib/yieldCsv";
 
-export type ReportSubject = { building: string; face: string };
+export type ReportSubject = {
+  building: string;
+  faceLabel: string;
+  face: string;
+};
 
 type EstimateExportProps = {
   subject: ReportSubject;
@@ -83,7 +87,7 @@ function Report({
 
       <dl className="mt-4 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1">
         <Row label={t.report.building} value={subject.building} />
-        <Row label={t.report.roofFace} value={subject.face} />
+        <Row label={subject.faceLabel} value={subject.face} />
         <Row
           label={t.report.location}
           value={t.report.coordinates(query.lat, query.lon)}

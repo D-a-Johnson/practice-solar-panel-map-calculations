@@ -36,6 +36,8 @@ export const de: Messages = {
     height: (metres: number) => `${number(metres, 1)} m hoch`,
     roofFaces: (count: number) => `Dachflächen (${count})`,
     flat: "flach",
+    walls: (count: number) => `Wände für Balkonkraftwerke (${count})`,
+    wallWidth: (width: number) => `${number(width)} m breit`,
     face: (tilt: number, area: number) =>
       `${number(tilt)}° · ${number(area)} m²`,
   },
@@ -60,6 +62,8 @@ export const de: Messages = {
         ? `Dachparallel (${number(tilt)}° ${direction})`
         : `Dachparallel (${number(tilt)}°, flach)`,
     stands: (tilt: number) => `Aufgeständert, ${tilt}° nach Süden`,
+    wall: (direction: string) =>
+      `Am Geländer oder an der Wand (90° ${direction})`,
     custom: "Eigene Neigung und Ausrichtung",
     tilt: (degrees: number) => `Neigung ${degrees}°`,
     direction: "Ausrichtung",
@@ -140,6 +144,7 @@ export const de: Messages = {
     created: (day: Date) => `Erstellt am ${date(day)}`,
     building: "Gebäude",
     roofFace: "Dachfläche",
+    wall: "Wand",
     location: "Lage",
     coordinates: (lat: number, lon: number) =>
       `${number(lat, 5)}° N, ${number(lon, 5)}° O`,

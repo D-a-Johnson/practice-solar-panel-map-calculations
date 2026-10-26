@@ -21,7 +21,7 @@ import { type ReactNode, useMemo, useState } from "react";
  */
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
-import { type Building, type LngLat, roofsOf } from "../../api/buildings";
+import { type Building, type LngLat } from "../../api/buildings";
 import { FREIBURG_CENTER, MAP_MAX_BOUNDS } from "../../lib/region";
 import { pointInside, type XY } from "../../lib/pointInside";
 import { useI18n } from "../../i18n/language";
@@ -118,6 +118,13 @@ export function MapView({ building, selectedFaceId, onPick }: MapViewProps) {
             filter={["==", ["get", "kind"], "footprint"]}
             paint={{ "line-color": "#b45309", "line-width": 3 }}
           />
+          <Layer
+            id="selection-wall"
+            type="line"
+            filter={["==", ["get", "kind"], "wall"]}
+            layout={{ "line-cap": "round" }}
+            paint={{ "line-color": "#c2410c", "line-width": 8 }}
+          />
         </Source>
       </Map>
       {styleFailed && <MapMessage>{t.map.styleFailed}</MapMessage>}
@@ -182,11 +189,18 @@ function toFeatures(
         geometry: building.footprint,
         properties: { kind: "footprint" },
       },
-      ...roofsOf(building).map((roof) => ({
+      ...building.surfaces.map((roof) => ({
         type: "Feature" as const,
         geometry: roof.geometry,
         properties: { kind: "roof", selected: roof.gml_id === selectedFaceId },
       })),
+      ...building.walls
+        .filter((wall) => wall.id === selectedFaceId)
+        .map((wall) => ({
+          type: "Feature" as const,
+          geometry: wall.geometry,
+          properties: { kind: "wall" },
+        })),
     ],
   };
 }

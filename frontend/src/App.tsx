@@ -1,7 +1,7 @@
 import { MapProvider } from "@vis.gl/react-maplibre";
 import { useState } from "react";
 
-import { type LngLat, roofsOf, useBuildingAt } from "./api/buildings";
+import { type LngLat, useBuildingAt } from "./api/buildings";
 import { AddressSearch } from "./components/AddressSearch";
 import { ApiStatus } from "./components/ApiStatus";
 import { AssumptionsProvider } from "./components/AssumptionsProvider";
@@ -22,7 +22,7 @@ export default function App() {
   const building = useBuildingAt(picked);
 
   const largestRoofId = building.data
-    ? roofsOf(building.data)[0]?.gml_id
+    ? building.data.surfaces[0]?.gml_id
     : undefined;
   const selectedFaceId = chosenFaceId ?? largestRoofId ?? null;
 

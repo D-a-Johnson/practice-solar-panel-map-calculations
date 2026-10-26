@@ -1,4 +1,4 @@
-import type { Surface } from "../api/buildings";
+import type { Face } from "../api/buildings";
 import type { Messages } from "../i18n/en";
 
 export type Mounting = "flush" | "stands" | "custom";
@@ -12,6 +12,12 @@ export type Orientation = { tilt: number; azimuth: number };
  */
 export const FLAT_MAX_TILT = 10;
 export const STAND_TILT = 15;
+
+/**
+ * Product choices: ten panels as a start for a roof, two for a balcony like
+ * most plug-in balcony kits.
+ */
+export const DEFAULT_PANELS = { roof: 10, wall: 2 } as const;
 const SOUTH = 180;
 
 export const COMPASS = [
@@ -25,27 +31,27 @@ export const COMPASS = [
   { label: "NW", azimuth: 315 },
 ] as const;
 
-export function isFlat(face: Surface): boolean {
+export function isFlat(face: Face): boolean {
   return face.tilt < FLAT_MAX_TILT;
 }
 
 /** "flat" or the face's compass direction, in the user's language. */
-export function faceName(face: Surface, t: Messages): string {
+export function faceName(face: Face, t: Messages): string {
   return isFlat(face) || !face.direction
     ? t.building.flat
     : t.directions[face.direction];
 }
 
-export function defaultMounting(face: Surface): Mounting {
+export function defaultMounting(face: Face): Mounting {
   return isFlat(face) ? "stands" : "flush";
 }
 
-export function faceOrientation(face: Surface): Orientation {
+export function faceOrientation(face: Face): Orientation {
   return { tilt: face.tilt, azimuth: face.azimuth ?? SOUTH };
 }
 
 export function orientationFor(
-  face: Surface,
+  face: Face,
   mounting: Mounting,
   custom: Orientation,
 ): Orientation {

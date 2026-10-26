@@ -21,9 +21,9 @@ type SurfaceKind = Literal["roof", "ground"]
 type Ring = tuple[Point, ...]
 
 # ClosureSurfaces are virtual faces that seal a solid where building parts
-# meet, so they are never read. WallSurfaces are skipped until a feature
-# uses them: they are about 80% of all faces and would more than double the
-# import time of a tile.
+# meet, so they are never read. WallSurfaces are skipped: they are about 80%
+# of all faces and would more than double the import time of a tile, and the
+# wall directions balcony panels need come from the footprint (facades.py).
 SURFACE_KINDS: dict[str, SurfaceKind] = {
     "RoofSurface": "roof",
     "GroundSurface": "ground",

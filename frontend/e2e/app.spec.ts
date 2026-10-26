@@ -150,6 +150,25 @@ test("exports the estimate as CSV and as a printable report", async ({
   ).toBeHidden();
 });
 
+test("a wall gives a balcony estimate with two panels", async ({ page }) => {
+  await answerSearchesWith(page, HOUSE);
+  await searchField(page).fill("Moltkestraße 18");
+  await page.getByRole("option", { name: /Moltkestraße 18/ }).click();
+
+  await page.getByRole("button", { name: "S 10 m wide" }).click();
+
+  await expect(page.getByRole("spinbutton", { name: "Panels" })).toHaveValue(
+    "2",
+  );
+  await expect(
+    page.getByRole("radio", { name: "On the railing or wall (90° S)" }),
+  ).toBeChecked();
+  /** The seeded 787.69 kWh per kWp for the south wall times 2 × 440 W. */
+  await expect(
+    page.getByRole("region", { name: "Yield estimate" }),
+  ).toContainText("693 kWh per year");
+});
+
 function searchField(page: Page) {
   return page.getByRole("combobox", { name: "Search for an address" });
 }
