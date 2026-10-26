@@ -1,7 +1,8 @@
 from django.urls import path
 
-from estimates.views import estimate
+from estimates.views import assumptions, estimate
 
 urlpatterns = [
-    path("", estimate, name="estimate"),
+    path("estimates", estimate, name="estimate"),
+    path("assumptions", assumptions, name="assumptions"),
 ]

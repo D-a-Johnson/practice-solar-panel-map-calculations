@@ -5,6 +5,7 @@ import { type Building, type LngLat, roofsOf } from "../../api/buildings";
 import { isFlat } from "../../lib/setup";
 import { FaceSetup } from "./FaceSetup";
 import { Hint } from "./Hint";
+import { NumberInput } from "./NumberInput";
 
 type BuildingPanelProps = {
   picked: LngLat | null;
@@ -121,31 +122,6 @@ function BuildingDetails({
         </>
       )}
     </div>
-  );
-}
-
-function NumberInput({
-  label,
-  value,
-  onChange,
-  min,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-  min: number;
-}) {
-  return (
-    <label className="flex flex-col text-xs text-slate-600">
-      {label}
-      <input
-        type="number"
-        min={min}
-        value={Number.isNaN(value) ? "" : value}
-        onChange={(event) => onChange(event.target.valueAsNumber)}
-        className="w-20 rounded border border-slate-300 px-2 py-1 text-sm text-slate-900"
-      />
-    </label>
   );
 }
 

@@ -21,3 +21,18 @@ class PvgisResult(models.Model):
 
     def __str__(self) -> str:
         return f"{self.lat},{self.lon} tilt {self.tilt} aspect {self.aspect}"
+
+
+class Assumption(models.Model):
+    """A number the economics depend on, with where it came from and when."""
+
+    key = models.SlugField(max_length=40, unique=True)
+    label = models.CharField(max_length=80)
+    value = models.FloatField()
+    unit = models.CharField(max_length=20)
+    source = models.CharField(max_length=200)
+    source_url = models.URLField(max_length=300)
+    as_of = models.CharField(max_length=20)
+
+    def __str__(self) -> str:
+        return f"{self.key} = {self.value} {self.unit}"

@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from estimates.models import Assumption
 from estimates.pvgis import PvgisUnavailable, yield_per_kwp
 from estimates.serializers import EstimateQuerySerializer
 
@@ -28,5 +29,22 @@ def estimate(request: Request) -> Response:
         {
             "annual_kwh_per_kwp": result.annual_kwh,
             "monthly_kwh_per_kwp": result.monthly_kwh,
+        }
+    )
+
+
+@api_view(["GET"])
+def assumptions(request: Request) -> Response:
+    return Response(
+        {
+            a.key: {
+                "label": a.label,
+                "value": a.value,
+                "unit": a.unit,
+                "source": a.source,
+                "source_url": a.source_url,
+                "as_of": a.as_of,
+            }
+            for a in Assumption.objects.order_by("key")
         }
     )

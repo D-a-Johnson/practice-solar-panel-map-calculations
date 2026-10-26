@@ -61,3 +61,21 @@ def test_pvgis_outage_answers_503(client, monkeypatch):
 )
 def test_invalid_inputs_are_rejected(client, change):
     assert client.get(URL, {**WEST_ROOF, **change}).status_code == 400
+
+
+@pytest.mark.django_db
+def test_assumptions_come_with_value_unit_source_and_date(client):
+    body = client.get("/api/assumptions").json()
+
+    assert set(body) == {
+        "electricity_price",
+        "feed_in_tariff",
+        "self_consumption_share",
+        "system_cost_per_kwp",
+        "grid_co2_factor",
+    }
+    for assumption in body.values():
+        assert assumption["value"] > 0
+        assert assumption["unit"]
+        assert assumption["source_url"].startswith("https://")
+        assert assumption["as_of"]

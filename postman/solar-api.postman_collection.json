@@ -194,6 +194,52 @@
         }
       ],
       "response": []
+    },
+    {
+      "name": "Assumptions",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/assumptions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "assumptions"
+          ]
+        },
+        "description": "Default values for the economics (prices, tariff, self-consumption, cost, CO₂ factor), each with its source and date. Editable in the Django admin."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "",
+              "pm.test(\"status is 200\", () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"has all five assumptions with value and source\", () => {",
+              "  [\"electricity_price\", \"feed_in_tariff\", \"self_consumption_share\", \"system_cost_per_kwp\", \"grid_co2_factor\"].forEach((key) => {",
+              "    pm.expect(body[key].value).to.be.above(0);",
+              "    pm.expect(body[key].source_url).to.match(/^https:\\/\\//);",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": []
     }
   ]
 }
