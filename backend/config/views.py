@@ -16,8 +16,7 @@ def health(request: Request) -> Response:
     One cheap query proves the whole chain works: Django, the database
     connection, and the PostGIS extension. A failure returns 503 (Service
     Unavailable) instead of crashing with 500, so callers such as the
-    frontend indicator, Postman and later the Azure health probe get a
-    clear "not ready" answer.
+    frontend indicator and Postman get a clear "not ready" answer.
     """
     try:
         with connection.cursor() as cursor:

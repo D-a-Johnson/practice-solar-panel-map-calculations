@@ -1,0 +1,32 @@
+# The app on its own throwaway database for the Playwright tests, started
+# by frontend/playwright.config.ts. It runs next to the development setup:
+# its own project name, no database port on the host, and web on 8081.
+name: solar-e2e
+
+services:
+  db:
+    ports: !reset []
+    networks: [offline]
+
+  # The seed holds the two buildings from the backend test fixture and the
+  # PVGIS answer the tests need, recorded from a real run.
+  migrate:
+    command:
+      - sh
+      - -c
+      - python manage.py migrate && python manage.py loaddata fixtures/e2e.json
+    networks: [offline]
+
+  backend:
+    networks: [offline]
+
+  web:
+    ports: !override
+      - "127.0.0.1:8081:80"
+    networks: [default, offline]
+
+# The backend can't reach the internet, so a test that needs LGL or PVGIS
+# data missing from the seed fails instead of quietly calling them.
+networks:
+  offline:
+    internal: true

@@ -42,6 +42,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves the admin's CSS and JavaScript. Django itself only does that
+    # through runserver in debug mode.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -98,5 +101,6 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 LOD2_CACHE_DIR = Path(os.environ.get("LOD2_CACHE_DIR", BASE_DIR / "data" / "lod2"))

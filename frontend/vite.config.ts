@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
@@ -15,6 +16,9 @@ import { defineConfig } from "vite";
  *
  * Workers are bundled as ES modules because MapLibre starts its worker
  * with `{ type: "module" }`.
+ *
+ * Vitest only runs the unit tests in `src/`; the browser tests in `e2e/`
+ * belong to Playwright.
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -28,5 +32,8 @@ export default defineConfig({
   },
   worker: {
     format: "es",
+  },
+  test: {
+    include: ["src/**/*.test.ts"],
   },
 });

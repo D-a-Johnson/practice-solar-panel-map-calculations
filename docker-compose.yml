@@ -1,5 +1,20 @@
 name: solar
 
+# Shared by the one-off migrate run and the running backend. The "app"
+# profile keeps `docker compose up` to the database for local development;
+# `docker compose --profile app up` runs the whole app in containers.
+x-backend: &backend
+  build: backend
+  profiles: [app]
+  env_file: .env
+  environment:
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    DJANGO_DEBUG: "false"
+  depends_on:
+    db:
+      condition: service_healthy
+
 services:
   db:
     image: postgis/postgis:18-3.6
@@ -20,5 +35,30 @@ services:
       timeout: 5s
       retries: 10
 
+  # Migrations run once before the backend starts, not inside it, so
+  # several backend containers never migrate at the same time.
+  migrate:
+    <<: *backend
+    command: ["python", "manage.py", "migrate"]
+
+  backend:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - lod2-cache:/app/data/lod2
+
+  web:
+    build: frontend
+    profiles: [app]
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - backend
+
 volumes:
   db-data:
+  lod2-cache:

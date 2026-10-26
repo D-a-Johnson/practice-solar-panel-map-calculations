@@ -45,10 +45,7 @@ export default function App() {
           </header>
 
           <main className="grid min-h-0 flex-1 grid-rows-[1fr_auto] md:grid-cols-[1fr_24rem] md:grid-rows-1">
-            <section
-              aria-label="Map"
-              className="relative min-h-80 bg-slate-200"
-            >
+            <div className="relative min-h-80 bg-slate-200">
               <MapView
                 building={building.data}
                 selectedFaceId={selectedFaceId}
@@ -62,7 +59,7 @@ export default function App() {
                   </p>
                 </div>
               )}
-            </section>
+            </div>
 
             <aside
               aria-label="Results"
