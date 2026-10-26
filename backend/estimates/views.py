@@ -1,12 +1,28 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from config.schema import INVALID_QUERY, error
 from estimates.models import Assumption
 from estimates.pvgis import PvgisUnavailable, yield_per_kwp
-from estimates.serializers import EstimateQuerySerializer
+from estimates.serializers import (
+    AssumptionSerializer,
+    AssumptionsSerializer,
+    EstimateQuerySerializer,
+    YieldPerKwpSerializer,
+)
 
 
+@extend_schema(
+    summary="Yield per kWp",
+    parameters=[EstimateQuerySerializer],
+    responses={
+        200: YieldPerKwpSerializer,
+        400: INVALID_QUERY,
+        503: error("The PVGIS yield service is not reachable."),
+    },
+)
 @api_view(["GET"])
 def estimate(request: Request) -> Response:
     """
@@ -25,26 +41,23 @@ def estimate(request: Request) -> Response:
             {"detail": "The PVGIS yield service is not reachable. Try again later."},
             status=503,
         )
-    return Response(
-        {
-            "annual_kwh_per_kwp": result.annual_kwh,
-            "monthly_kwh_per_kwp": result.monthly_kwh,
-        }
-    )
+    return Response(YieldPerKwpSerializer(result).data)
 
 
+@extend_schema(
+    summary="Assumptions for savings and payback",
+    responses=AssumptionsSerializer,
+)
 @api_view(["GET"])
 def assumptions(request: Request) -> Response:
+    """
+    Default values for the economics, keyed by name (for example
+    ``electricity_price``), each with its source. Editable in the Django
+    admin.
+    """
     return Response(
         {
-            a.key: {
-                "label": a.label,
-                "value": a.value,
-                "unit": a.unit,
-                "source": a.source,
-                "source_url": a.source_url,
-                "as_of": a.as_of,
-            }
-            for a in Assumption.objects.order_by("key")
+            assumption.key: AssumptionSerializer(assumption).data
+            for assumption in Assumption.objects.order_by("key")
         }
     )

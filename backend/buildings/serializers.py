@@ -3,10 +3,11 @@ import json
 from django.contrib.gis.db.models.functions import AsGeoJSON, Transform
 from django.contrib.gis.gdal import CoordTransform, SpatialReference
 from django.contrib.gis.geos import LineString
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from buildings.facades import facades
-from buildings.geometry import direction_label
+from buildings.geometry import DIRECTIONS, direction_label
 from buildings.models import Building, Surface
 
 # Baden-Württemberg's bounding box from OpenStreetMap (Nominatim) as
@@ -23,6 +24,19 @@ WALL_TILT = 90.0
 
 def wgs84_geojson(field: str) -> AsGeoJSON:
     return AsGeoJSON(Transform(field, 4326), precision=GEOJSON_DECIMALS)
+
+
+def geojson_schema(geometry_type: str) -> dict:
+    """The OpenAPI description of a GeoJSON geometry in longitude/latitude."""
+    return {
+        "type": "object",
+        "description": f"GeoJSON {geometry_type} in WGS84 longitude/latitude",
+        "properties": {
+            "type": {"type": "string", "enum": [geometry_type]},
+            "coordinates": {"type": "array", "items": {}},
+        },
+        "required": ["type", "coordinates"],
+    }
 
 
 class LocationSerializer(serializers.Serializer):
@@ -55,11 +69,29 @@ class SurfaceSerializer(serializers.ModelSerializer):
             "geometry",
         )
 
+    @extend_schema_field(serializers.ChoiceField(DIRECTIONS, allow_null=True))
     def get_direction(self, surface: Surface) -> str | None:
         return None if surface.azimuth is None else direction_label(surface.azimuth)
 
+    @extend_schema_field(geojson_schema("Polygon"))
     def get_geometry(self, surface: Surface) -> dict:
         return json.loads(surface.geojson)
+
+
+class WallSerializer(serializers.Serializer):
+    """A facade taken from the building's footprint (see facades.py)."""
+
+    id = serializers.CharField()
+    kind = serializers.ChoiceField(["wall"])
+    tilt = serializers.FloatField()
+    azimuth = serializers.FloatField()
+    direction = serializers.ChoiceField(DIRECTIONS)
+    width = serializers.FloatField()
+    geometry = serializers.SerializerMethodField()
+
+    @extend_schema_field(geojson_schema("LineString"))
+    def get_geometry(self, wall: dict) -> dict:
+        return wall["geometry"]
 
 
 class BuildingSerializer(serializers.ModelSerializer):
@@ -88,6 +120,7 @@ class BuildingSerializer(serializers.ModelSerializer):
             "walls",
         )
 
+    @extend_schema_field(geojson_schema("MultiPolygon"))
     def get_footprint(self, building: Building) -> dict:
         footprint = (
             Building.objects.filter(pk=building.pk)
@@ -97,12 +130,14 @@ class BuildingSerializer(serializers.ModelSerializer):
         )
         return json.loads(footprint)
 
+    @extend_schema_field(SurfaceSerializer(many=True))
     def get_surfaces(self, building: Building) -> list:
         surfaces = building.surfaces.order_by("-area").annotate(
             geojson=wgs84_geojson("geometry")
         )
         return SurfaceSerializer(surfaces, many=True).data
 
+    @extend_schema_field(WallSerializer(many=True))
     def get_walls(self, building: Building) -> list:
         to_wgs84 = CoordTransform(
             SpatialReference(building.footprint.srid), SpatialReference(4326)
@@ -128,4 +163,4 @@ class BuildingSerializer(serializers.ModelSerializer):
                     },
                 }
             )
-        return walls
+        return WallSerializer(walls, many=True).data

@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     "django.contrib.postgres",
     "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "buildings",
     "estimates",
 ]
@@ -102,5 +104,27 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# The API is public and read-only, so it has no logins. DRF's default session
+# and basic authentication would otherwise also appear in the API docs.
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Solar estimator API",
+    "DESCRIPTION": (
+        "Buildings in Baden-Württemberg with their roof faces and walls (from "
+        "LGL's LoD2 data), PVGIS yield per kWp, and the assumptions for "
+        "savings and payback."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # Swagger UI's files are served from the drf-spectacular-sidecar package;
+    # the default loads whatever version a CDN currently calls "latest".
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+}
 
 LOD2_CACHE_DIR = Path(os.environ.get("LOD2_CACHE_DIR", BASE_DIR / "data" / "lod2"))

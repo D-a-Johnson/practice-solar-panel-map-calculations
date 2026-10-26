@@ -3,9 +3,11 @@ server {
     root /usr/share/nginx/html;
 
     # Text shrinks to about a third (the MapLibre bundle from 1,094 kB to
-    # 296 kB). nginx compresses only HTML unless told otherwise.
+    # 296 kB). nginx compresses only HTML unless told otherwise. JavaScript
+    # comes with two names: nginx labels its own files application/javascript,
+    # Django (admin, API docs) uses text/javascript.
     gzip on;
-    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_types text/css application/javascript text/javascript application/json image/svg+xml;
 
     # Vite puts a content hash in every asset file name, so a changed file
     # always gets a new URL and browsers may keep assets for good.

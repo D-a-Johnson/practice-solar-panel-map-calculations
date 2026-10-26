@@ -3,11 +3,26 @@ Project-level API views that don't belong to any feature app.
 """
 
 from django.db import DatabaseError, connection
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 
+@extend_schema(
+    summary="Health check",
+    responses={
+        200: inline_serializer(
+            "Health",
+            {"status": serializers.CharField(), "postgis": serializers.CharField()},
+        ),
+        503: inline_serializer(
+            "HealthError",
+            {"status": serializers.CharField(), "database": serializers.CharField()},
+        ),
+    },
+)
 @api_view(["GET"])
 def health(request: Request) -> Response:
     """
