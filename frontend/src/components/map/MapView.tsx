@@ -46,6 +46,12 @@ const LGL_ATTRIBUTION =
   "Datenlizenz Deutschland – Namensnennung – Version 2.0</a>, " +
   '<a href="https://www.lgl-bw.de" target="_blank" rel="noreferrer">www.lgl-bw.de</a>';
 
+/**
+ * Lets components outside the map, such as the address search, reach it
+ * through `useMap()`.
+ */
+export const MAP_ID = "solar";
+
 const NO_FEATURES: FeatureCollection = {
   type: "FeatureCollection",
   features: [],
@@ -79,6 +85,7 @@ export function MapView({ building, selectedFaceId, onPick }: MapViewProps) {
   return (
     <>
       <Map
+        id={MAP_ID}
         initialViewState={{ ...FREIBURG_CENTER, zoom: 16 }}
         mapStyle={MAP_STYLE}
         maxBounds={MAP_MAX_BOUNDS}
