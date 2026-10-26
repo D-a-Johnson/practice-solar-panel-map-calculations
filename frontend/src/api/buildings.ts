@@ -1,9 +1,11 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import type { MultiPolygon, Polygon } from "geojson";
 
-import { errorMessage } from "./http";
+import { ApiError } from "./http";
 
 export type LngLat = { lng: number; lat: number };
+
+export type Direction = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
 
 export type Surface = {
   gml_id: string;
@@ -12,7 +14,7 @@ export type Surface = {
   area: number;
   tilt: number;
   azimuth: number | null;
-  direction: string | null;
+  direction: Direction | null;
   geometry: Polygon;
 };
 
@@ -43,7 +45,7 @@ export async function fetchBuildingAt({
     return null;
   }
   if (!response.ok) {
-    throw new Error(await errorMessage(response));
+    throw new ApiError(response.status);
   }
   return (await response.json()) as Building;
 }

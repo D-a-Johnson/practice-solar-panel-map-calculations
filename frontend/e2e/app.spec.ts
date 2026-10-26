@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, type Page, test } from "@playwright/test";
 
 /**
@@ -99,6 +101,53 @@ test("suggestions work with the mouse and close when the field loses focus", asy
   await expect(page.getByRole("listbox")).toBeVisible();
   await page.getByRole("heading", { name: "Solar estimator" }).click();
   await expect(page.getByRole("listbox")).toBeHidden();
+});
+
+test("switching to German translates texts and number formats and is remembered", async ({
+  page,
+}) => {
+  await answerSearchesWith(page, HOUSE);
+  await searchField(page).fill("Moltkestraße 18");
+  await page.getByRole("option", { name: /Moltkestraße 18/ }).click();
+
+  await page.getByRole("button", { name: "Deutsch" }).click();
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(page.getByText("Dachflächen (2)")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Ertragsschätzung" }),
+  ).toContainText("3.545 kWh pro Jahr");
+
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Solarrechner" }),
+  ).toBeVisible();
+});
+
+test("exports the estimate as CSV and as a printable report", async ({
+  page,
+}) => {
+  await answerSearchesWith(page, HOUSE);
+  await searchField(page).fill("Moltkestraße 18");
+  await page.getByRole("option", { name: /Moltkestraße 18/ }).click();
+
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Download CSV" }).click();
+  const download = await downloading;
+  const lines = (await readFile(await download.path(), "utf8")).split("\r\n");
+  expect(download.suggestedFilename()).toBe("solar-yield.csv");
+  expect(lines).toHaveLength(14);
+  expect(lines[0]).toBe("\uFEFFMonth,Yield (kWh)");
+  expect(lines[1]).toBe("Jan,95");
+  expect(lines[13]).toBe("Year,3545");
+
+  await page.emulateMedia({ media: "print" });
+  await expect(
+    page.getByRole("heading", { name: "Solar yield estimate" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Solar estimator" }),
+  ).toBeHidden();
 });
 
 function searchField(page: Page) {

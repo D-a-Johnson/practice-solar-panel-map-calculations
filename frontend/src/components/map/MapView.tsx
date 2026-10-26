@@ -24,6 +24,7 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import { type Building, type LngLat, roofsOf } from "../../api/buildings";
 import { FREIBURG_CENTER, MAP_MAX_BOUNDS } from "../../lib/region";
 import { pointInside, type XY } from "../../lib/pointInside";
+import { useI18n } from "../../i18n/language";
 import { canRenderWebGL2 } from "../../lib/webgl";
 
 /**
@@ -71,15 +72,10 @@ export function MapView({ building, selectedFaceId, onPick }: MapViewProps) {
 
   const [webglAvailable] = useState(canRenderWebGL2);
   const [styleFailed, setStyleFailed] = useState(false);
+  const { t } = useI18n();
 
   if (!webglAvailable) {
-    return (
-      <MapMessage>
-        This browser can't display the map because WebGL 2 is unavailable. Try
-        another browser, or turn on hardware acceleration in the browser
-        settings.
-      </MapMessage>
-    );
+    return <MapMessage>{t.map.noWebgl}</MapMessage>;
   }
 
   return (
@@ -124,12 +120,7 @@ export function MapView({ building, selectedFaceId, onPick }: MapViewProps) {
           />
         </Source>
       </Map>
-      {styleFailed && (
-        <MapMessage>
-          The map couldn't load. Check your internet connection and reload the
-          page.
-        </MapMessage>
-      )}
+      {styleFailed && <MapMessage>{t.map.styleFailed}</MapMessage>}
     </>
   );
 }

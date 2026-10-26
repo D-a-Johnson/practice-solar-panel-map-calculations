@@ -1,14 +1,15 @@
 import { useHealth } from "../api/health";
+import { useI18n } from "../i18n/language";
 
-const STATUS_LOOK = {
-  pending: { dot: "bg-slate-400", label: "Checking API…" },
-  error: { dot: "bg-red-500", label: "API offline" },
-  success: { dot: "bg-emerald-500", label: "API ok" },
+const STATUS_DOT = {
+  pending: "bg-slate-400",
+  error: "bg-red-500",
+  success: "bg-emerald-500",
 } as const;
 
 export function ApiStatus() {
   const { status, data } = useHealth();
-  const look = STATUS_LOOK[status];
+  const { t } = useI18n();
 
   return (
     <span
@@ -18,9 +19,9 @@ export function ApiStatus() {
     >
       <span
         aria-hidden="true"
-        className={`size-2.5 rounded-full ${look.dot}`}
+        className={`size-2.5 rounded-full ${STATUS_DOT[status]}`}
       />
-      {look.label}
+      {t.api[status]}
     </span>
   );
 }

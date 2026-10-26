@@ -3,6 +3,7 @@ import { type KeyboardEvent, useId, useState } from "react";
 
 import type { LngLat } from "../api/buildings";
 import { labelOf, type Place, usePlaces } from "../api/places";
+import { useI18n } from "../i18n/language";
 import { useDebouncedValue } from "../lib/useDebouncedValue";
 import { MAP_ID } from "./map/MapView";
 
@@ -19,6 +20,7 @@ const BUILDING_ZOOM = 18;
  */
 export function AddressSearch({ onPick }: { onPick: (point: LngLat) => void }) {
   const map = useMap()[MAP_ID];
+  const { t } = useI18n();
   const listId = useId();
   const [text, setText] = useState("");
   const [near, setNear] = useState<LngLat>();
@@ -79,7 +81,7 @@ export function AddressSearch({ onPick }: { onPick: (point: LngLat) => void }) {
       <input
         type="search"
         role="combobox"
-        aria-label="Search for an address"
+        aria-label={t.search.label}
         aria-autocomplete="list"
         aria-expanded={expanded}
         aria-controls={listId}
@@ -87,7 +89,7 @@ export function AddressSearch({ onPick }: { onPick: (point: LngLat) => void }) {
           activeIndex === -1 ? undefined : `${listId}-${activeIndex}`
         }
         autoComplete="off"
-        placeholder="Address, e.g. Gauchstraße 3 Freiburg"
+        placeholder={t.search.placeholder}
         value={text}
         onChange={(event) => {
           const center = map?.getCenter();
@@ -106,7 +108,7 @@ export function AddressSearch({ onPick }: { onPick: (point: LngLat) => void }) {
             <ul
               id={listId}
               role="listbox"
-              aria-label="Addresses"
+              aria-label={t.search.results}
               /**
                * Keeps focus in the text field, whose blur would otherwise
                * close the list before the click on an option lands.
@@ -132,10 +134,10 @@ export function AddressSearch({ onPick }: { onPick: (point: LngLat) => void }) {
           ) : (
             <p role="status" className="px-3 py-2 text-sm text-slate-500">
               {places.isError
-                ? "Address search isn't available right now."
+                ? t.search.unavailable
                 : places.isFetching
-                  ? "Searching…"
-                  : "No match in Baden-Württemberg."}
+                  ? t.search.searching
+                  : t.search.noMatch}
             </p>
           )}
         </div>

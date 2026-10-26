@@ -1,4 +1,5 @@
 import type { Surface } from "../api/buildings";
+import type { Messages } from "../i18n/en";
 
 export type Mounting = "flush" | "stands" | "custom";
 
@@ -26,6 +27,13 @@ export const COMPASS = [
 
 export function isFlat(face: Surface): boolean {
   return face.tilt < FLAT_MAX_TILT;
+}
+
+/** "flat" or the face's compass direction, in the user's language. */
+export function faceName(face: Surface, t: Messages): string {
+  return isFlat(face) || !face.direction
+    ? t.building.flat
+    : t.directions[face.direction];
 }
 
 export function defaultMounting(face: Surface): Mounting {

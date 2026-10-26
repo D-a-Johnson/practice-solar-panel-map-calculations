@@ -1,27 +1,24 @@
 import type { AssumptionKey } from "../../api/assumptions";
+import type { Messages } from "../../i18n/en";
+import { useI18n } from "../../i18n/language";
 import { useAssumptions } from "../../lib/assumptionsContext";
 import { NumberInput } from "./NumberInput";
 
 /** Inputs shown in friendlier units than the stored ones (€/kWh, share). */
 const FIELDS: {
-  key: AssumptionKey;
-  label: string;
+  key: keyof Messages["assumptions"]["fields"];
   factor: number;
   step: number;
 }[] = [
-  { key: "electricity_price", label: "Price ct/kWh", factor: 100, step: 0.1 },
-  { key: "feed_in_tariff", label: "Feed-in ct/kWh", factor: 100, step: 0.01 },
-  {
-    key: "self_consumption_share",
-    label: "Used at home %",
-    factor: 100,
-    step: 1,
-  },
-  { key: "system_cost_per_kwp", label: "Cost €/kWp", factor: 1, step: 10 },
+  { key: "electricity_price", factor: 100, step: 0.1 },
+  { key: "feed_in_tariff", factor: 100, step: 0.01 },
+  { key: "self_consumption_share", factor: 100, step: 1 },
+  { key: "system_cost_per_kwp", factor: 1, step: 10 },
 ];
 
 export function AssumptionsEditor() {
   const { defaults, values, setValue, reset } = useAssumptions();
+  const { t } = useI18n();
   if (!defaults || !values) {
     return null;
   }
@@ -29,13 +26,13 @@ export function AssumptionsEditor() {
   return (
     <details className="mt-3 text-sm">
       <summary className="cursor-pointer text-slate-600">
-        Assumptions and sources
+        {t.assumptions.title}
       </summary>
       <div className="mt-2 grid grid-cols-2 gap-2">
         {FIELDS.map((field) => (
           <NumberInput
             key={field.key}
-            label={field.label}
+            label={t.assumptions.fields[field.key]}
             value={round(values[field.key] * field.factor)}
             onChange={(value) => setValue(field.key, value / field.factor)}
             min={0}
@@ -48,21 +45,22 @@ export function AssumptionsEditor() {
         onClick={reset}
         className="mt-2 text-xs text-amber-700 underline"
       >
-        Reset to defaults
+        {t.assumptions.reset}
       </button>
       <ul className="mt-3 space-y-1 text-xs text-slate-500">
-        {Object.values(defaults).map((assumption) => (
-          <li key={assumption.label}>
-            {assumption.label}: {assumption.value} {assumption.unit}.{" "}
+        {(Object.keys(defaults) as AssumptionKey[]).map((key) => (
+          <li key={key}>
+            {t.assumptions.names[key]}:{" "}
+            {t.assumptions.values[key](defaults[key].value)}.{" "}
             <a
-              href={assumption.source_url}
+              href={defaults[key].source_url}
               target="_blank"
               rel="noreferrer"
               className="underline"
             >
-              {assumption.source}
+              {defaults[key].source}
             </a>{" "}
-            ({assumption.as_of})
+            ({defaults[key].as_of})
           </li>
         ))}
       </ul>

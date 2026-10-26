@@ -2,7 +2,9 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { type Building, type LngLat, roofsOf } from "../../api/buildings";
-import { isFlat } from "../../lib/setup";
+import { statusOf } from "../../api/http";
+import { useI18n } from "../../i18n/language";
+import { faceName } from "../../lib/setup";
 import { FaceSetup } from "./FaceSetup";
 import { Hint } from "./Hint";
 import { NumberInput } from "./NumberInput";
@@ -20,17 +22,28 @@ export function BuildingPanel({
   selectedFaceId,
   onSelectFace,
 }: BuildingPanelProps) {
+  const { t } = useI18n();
+
   if (!picked) {
-    return <Hint>Click a building on the map to start.</Hint>;
+    return <Hint>{t.building.start}</Hint>;
   }
   if (query.isPending) {
-    return <Hint>Loading building…</Hint>;
+    return <Hint>{t.building.loading}</Hint>;
   }
   if (query.isError) {
-    return <Hint>{query.error.message}</Hint>;
+    const status = statusOf(query.error);
+    return (
+      <Hint>
+        {status === 400
+          ? t.errors.outsideArea
+          : status === 503
+            ? t.errors.lgl
+            : t.errors.unexpected}
+      </Hint>
+    );
   }
   if (!query.data) {
-    return <Hint>No building here. Click directly on a building.</Hint>;
+    return <Hint>{t.building.none}</Hint>;
   }
   return (
     <BuildingDetails
@@ -56,7 +69,9 @@ function BuildingDetails({
   selectedFaceId,
   onSelectFace,
 }: BuildingDetailsProps) {
+  const { t } = useI18n();
   const roofs = roofsOf(building);
+  const name = title(building) || t.building.withoutAddress;
   const selected = roofs.find((roof) => roof.gml_id === selectedFaceId);
   const [panels, setPanels] = useState(10);
   const [wattsPerPanel, setWattsPerPanel] = useState(440);
@@ -64,15 +79,15 @@ function BuildingDetails({
 
   return (
     <div>
-      <h2 className="font-semibold">{title(building)}</h2>
+      <h2 className="font-semibold">{name}</h2>
       <p className="text-sm text-slate-600">
         {building.locality}
         {building.measured_height !== null &&
-          ` · ${building.measured_height.toFixed(1)} m high`}
+          ` · ${t.building.height(building.measured_height)}`}
       </p>
 
       <h3 className="mt-4 text-sm font-semibold">
-        Roof faces ({roofs.length})
+        {t.building.roofFaces(roofs.length)}
       </h3>
       <ul className="mt-2 max-h-48 overflow-y-auto text-sm">
         {roofs.map((roof) => (
@@ -83,9 +98,9 @@ function BuildingDetails({
               onClick={() => onSelectFace(roof.gml_id)}
               className="flex w-full justify-between rounded px-2 py-1.5 text-left hover:bg-slate-100 aria-pressed:bg-amber-100"
             >
-              <span>{isFlat(roof) ? "flat" : roof.direction}</span>
+              <span>{faceName(roof, t)}</span>
               <span className="text-slate-600">
-                {roof.tilt.toFixed(0)}° · {roof.area.toFixed(0)} m²
+                {t.building.face(roof.tilt, roof.area)}
               </span>
             </button>
           </li>
@@ -94,27 +109,28 @@ function BuildingDetails({
 
       {selected && (
         <>
-          <h3 className="mt-4 text-sm font-semibold">Setup</h3>
+          <h3 className="mt-4 text-sm font-semibold">{t.setup.title}</h3>
           <div className="mt-2 flex items-center gap-2 text-sm">
             <NumberInput
-              label="Panels"
+              label={t.setup.panels}
               value={panels}
               onChange={setPanels}
               min={1}
             />
             <span>×</span>
             <NumberInput
-              label="Watts each"
+              label={t.setup.wattsEach}
               value={wattsPerPanel}
               onChange={setWattsPerPanel}
               min={50}
             />
             <span className="text-slate-600">
-              = {peakPowerKwp.toFixed(2)} kWp
+              {t.setup.peakPower(peakPowerKwp)}
             </span>
           </div>
           <FaceSetup
             key={selected.gml_id}
+            building={[name, building.locality].filter(Boolean).join(", ")}
             face={selected}
             location={location}
             peakPowerKwp={peakPowerKwp}
@@ -127,5 +143,5 @@ function BuildingDetails({
 
 function title(building: Building): string {
   const address = `${building.street} ${building.house_number}`.trim();
-  return building.name || address || "Building without address";
+  return building.name || address;
 }

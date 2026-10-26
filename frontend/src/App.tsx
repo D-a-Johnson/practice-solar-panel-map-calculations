@@ -6,7 +6,9 @@ import { AddressSearch } from "./components/AddressSearch";
 import { ApiStatus } from "./components/ApiStatus";
 import { AssumptionsProvider } from "./components/AssumptionsProvider";
 import { MapView } from "./components/map/MapView";
+import { LanguageSwitch } from "./components/LanguageSwitch";
 import { BuildingPanel } from "./components/panel/BuildingPanel";
+import { useI18n } from "./i18n/language";
 
 /**
  * Page shell: a header on top, the map filling the remaining space, and
@@ -16,6 +18,7 @@ import { BuildingPanel } from "./components/panel/BuildingPanel";
 export default function App() {
   const [picked, setPicked] = useState<LngLat | null>(null);
   const [chosenFaceId, setChosenFaceId] = useState<string | null>(null);
+  const { t } = useI18n();
   const building = useBuildingAt(picked);
 
   const largestRoofId = building.data
@@ -34,12 +37,13 @@ export default function App() {
         <div className="flex h-dvh flex-col bg-slate-50 text-slate-900">
           <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-200 bg-white px-4 py-2">
             <img src="/favicon.svg" alt="" className="size-7" />
-            <h1 className="text-lg font-semibold">Solar estimator</h1>
+            <h1 className="text-lg font-semibold">{t.title}</h1>
             <span className="hidden text-sm text-slate-500 sm:inline">
               Baden-Württemberg
             </span>
             <AddressSearch onPick={pick} />
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-4">
+              <LanguageSwitch />
               <ApiStatus />
             </div>
           </header>
@@ -54,15 +58,14 @@ export default function App() {
               {building.isFetching && (
                 <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
                   <p className="rounded-md bg-white/90 px-4 py-2 text-sm shadow">
-                    Loading building… The first click in a new area downloads
-                    LGL data and can take about 20 seconds.
+                    {t.loadingBuilding}
                   </p>
                 </div>
               )}
             </div>
 
             <aside
-              aria-label="Results"
+              aria-label={t.results}
               className="overflow-y-auto border-t border-slate-200 bg-white p-4 md:border-t-0 md:border-l"
             >
               <BuildingPanel

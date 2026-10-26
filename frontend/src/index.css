@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+/*
+ * While an estimate is shown, printing (and "Save as PDF") shows its
+ * report instead of the app. Without an estimate the page prints as is.
+ */
+@media print {
+  body:has(> [data-print-report]) > #root {
+    display: none;
+  }
+}
+
+@page {
+  margin: 15mm;
+}

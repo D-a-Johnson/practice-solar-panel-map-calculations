@@ -1,33 +1,21 @@
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+import { useI18n } from "../../i18n/language";
 
 export function MonthlyChart({ values }: { values: number[] }) {
+  const { t } = useI18n();
+  const { months } = t.chart;
   const max = Math.max(...values);
-  const summary = `Monthly yield from ${Math.round(Math.min(...values))} to ${Math.round(max)} kWh`;
 
   return (
     <figure className="mt-3">
       <div
         role="img"
-        aria-label={summary}
+        aria-label={t.chart.summary(Math.min(...values), max)}
         className="flex h-28 items-end gap-1"
       >
         {values.map((value, month) => (
           <div
-            key={MONTHS[month]}
-            title={`${MONTHS[month]}: ${Math.round(value)} kWh`}
+            key={month}
+            title={t.chart.month(months[month], value)}
             className="flex-1 rounded-t bg-amber-400"
             style={{ height: `${(value / max) * 100}%` }}
           />
@@ -37,7 +25,7 @@ export function MonthlyChart({ values }: { values: number[] }) {
         aria-hidden="true"
         className="mt-1 flex gap-1 text-center text-[10px] text-slate-500"
       >
-        {MONTHS.map((month) => (
+        {months.map((month) => (
           <span key={month} className="flex-1">
             {month[0]}
           </span>

@@ -1,6 +1,6 @@
 import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
 
-import { errorMessage } from "./http";
+import { ApiError } from "./http";
 
 export type YieldQuery = {
   lat: number;
@@ -22,7 +22,7 @@ export async function fetchYieldPerKwp(
   );
   const response = await fetch(`/api/estimates?${params}`);
   if (!response.ok) {
-    throw new Error(await errorMessage(response));
+    throw new ApiError(response.status);
   }
   return (await response.json()) as YieldPerKwp;
 }
