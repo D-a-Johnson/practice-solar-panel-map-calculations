@@ -34,32 +34,49 @@ class ImportResult:
 
 
 def import_tile(tile_id: TileId, cache_dir: Path) -> ImportResult:
-    buildings = roofs = skipped = 0
+    """Imports a tile, replacing any earlier import of it."""
+    zip_path = download_tile(tile_id, cache_dir)
     with transaction.atomic():
-        lock_tile(tile_id)
-        zip_path = download_tile(tile_id, cache_dir)
-        Tile.objects.filter(id=str(tile_id)).delete()
-        tile = Tile.objects.create(id=str(tile_id))
-        for batch in batched(iter_buildings(zip_path), BATCH_SIZE, strict=False):
-            saved, saved_roofs, existing = _save_batch(tile, batch)
-            buildings += saved
-            roofs += saved_roofs
-            skipped += existing
-    return ImportResult(str(tile_id), buildings, roofs, skipped)
+        _lock(tile_id)
+        return _replace_tile(tile_id, zip_path)
 
 
-def lock_tile(tile_id: TileId) -> None:
+def import_tile_if_missing(tile_id: TileId, cache_dir: Path) -> None:
+    """
+    For lookups, where another request may be importing the same tile right
+    now: whoever waited for the lock finds the tile there and skips it.
+    """
+    zip_path = download_tile(tile_id, cache_dir)
+    with transaction.atomic():
+        _lock(tile_id)
+        if not Tile.objects.filter(id=str(tile_id)).exists():
+            _replace_tile(tile_id, zip_path)
+
+
+def _lock(tile_id: TileId) -> None:
     """
     Makes imports of the same tile wait for each other, across all processes
-    (gunicorn workers, import commands), until the current transaction ends.
-    Without it, a second import would download into the same .part file and
-    then fail on the duplicate Tile row.
+    (gunicorn workers, import commands), until the transaction ends. The
+    download happens before, so a slow LGL server never holds the lock or a
+    database transaction.
     """
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT pg_advisory_xact_lock(%s, %s)",
             [tile_id.east_km, tile_id.north_km],
         )
+
+
+def _replace_tile(tile_id: TileId, zip_path: Path) -> ImportResult:
+    buildings = roofs = skipped = 0
+    Tile.objects.filter(id=str(tile_id)).delete()
+    tile = Tile.objects.create(id=str(tile_id))
+    for batch in batched(iter_buildings(zip_path), BATCH_SIZE, strict=False):
+        saved, saved_roofs, existing = _save_batch(tile, batch)
+        buildings += saved
+        roofs += saved_roofs
+        skipped += existing
+    return ImportResult(str(tile_id), buildings, roofs, skipped)
 
 
 def _save_batch(tile: Tile, batch: Iterable[ParsedBuilding]) -> tuple[int, int, int]:

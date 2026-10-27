@@ -40,6 +40,7 @@ export const de: Messages = {
     faces: "Dachflächen oder Wände",
     walls: (count: number) => `Balkon & Wände (${count})`,
     wallsHint: "Für Module am Balkongeländer oder an der Fassade.",
+    noFaces: "Keine Dachfläche und keine Wand ist hier groß genug für Module.",
     wallWidth: (width: number) => `${number(width)} m breit`,
     face: (tilt: number, area: number) =>
       `${number(tilt)}° · ${number(area)} m²`,
@@ -170,6 +171,7 @@ export const de: Messages = {
     reload: "Seite neu laden",
     building:
       "Dieses Gebäude kann nicht angezeigt werden. Bitte ein anderes wählen.",
+    face: "Diese Fläche kann nicht angezeigt werden. Bitte eine andere wählen.",
   },
   errors: {
     outsideArea: "Dieser Ort liegt außerhalb von Baden-Württemberg.",

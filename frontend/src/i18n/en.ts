@@ -46,6 +46,7 @@ export const en = {
     faces: "Roof faces or walls",
     walls: (count: number) => `Balcony & walls (${count})`,
     wallsHint: "For panels on a balcony railing or a facade.",
+    noFaces: "No roof face or wall here is large enough for panels.",
     wallWidth: (width: number) => `${number(width)} m wide`,
     face: (tilt: number, area: number) =>
       `${number(tilt)}° · ${number(area)} m²`,
@@ -174,6 +175,7 @@ export const en = {
     page: "Something went wrong while showing the page.",
     reload: "Reload the page",
     building: "This building can't be shown. Try another one.",
+    face: "This face can't be shown. Try another one.",
   },
   errors: {
     outsideArea: "This place is outside Baden-Württemberg.",

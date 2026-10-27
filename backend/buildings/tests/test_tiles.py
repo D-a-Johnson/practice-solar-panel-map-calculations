@@ -95,12 +95,28 @@ def test_missing_tile_raises_and_leaves_no_file(tmp_path):
     assert list(tmp_path.iterdir()) == []
 
 
-def test_server_error_raises_and_leaves_no_cached_zip(tmp_path):
+def test_server_error_raises_and_leaves_no_file(tmp_path):
     client, _ = client_answering(503)
 
     with pytest.raises(TileDownloadFailed):
         download_tile(TileId(413, 5316), tmp_path, client)
-    assert not (tmp_path / "LoD2_32_413_5316_2_bw.zip").exists()
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_a_download_that_breaks_off_leaves_no_file(tmp_path):
+    class BreaksOff(httpx.SyncByteStream):
+        def __iter__(self):
+            yield b"first bytes of the zip"
+            raise httpx.ReadError("connection reset")
+
+    client = httpx.Client(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, stream=BreaksOff())
+        )
+    )
+    with pytest.raises(TileDownloadFailed):
+        download_tile(TileId(413, 5316), tmp_path, client)
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_unreachable_server_raises_download_failed(tmp_path):

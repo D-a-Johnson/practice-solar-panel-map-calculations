@@ -14,6 +14,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Imports from before walls were dropped stored them with
+        # kind="wall"; without this they would become Roof rows.
+        migrations.RunSQL(
+            "DELETE FROM buildings_surface WHERE kind = 'wall'",
+            reverse_sql=migrations.RunSQL.noop,
+        ),
         migrations.RemoveField(model_name="surface", name="kind"),
         migrations.RenameModel(old_name="Surface", new_name="Roof"),
         migrations.AlterField(

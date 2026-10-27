@@ -8,7 +8,7 @@ import pytest
 from django.contrib.gis.geos import Point
 from django.db import connection
 
-from buildings import lookup
+from buildings import importer, lookup
 from buildings.models import Building, Tile
 from buildings.tiles import TileDownloadFailed, TileId, TileNotAvailable
 
@@ -42,7 +42,7 @@ def fake_import(monkeypatch):
         imported.append(str(tile))
         Tile.objects.create(id=str(tile))
 
-    monkeypatch.setattr(lookup, "import_tile", fake)
+    monkeypatch.setattr(lookup, "import_tile_if_missing", fake)
     return imported
 
 
@@ -110,13 +110,13 @@ def test_a_click_just_outside_the_footprint_snaps_to_it(client, lod2_cache):
 @pytest.mark.django_db
 def test_a_tile_is_imported_only_once(client, lod2_cache, monkeypatch):
     calls = []
-    real_import = lookup.import_tile
+    real_import = lookup.import_tile_if_missing
 
     def counting_import(tile, cache_dir):
         calls.append(str(tile))
         return real_import(tile, cache_dir)
 
-    monkeypatch.setattr(lookup, "import_tile", counting_import)
+    monkeypatch.setattr(lookup, "import_tile_if_missing", counting_import)
     client.get(URL, INSIDE_MOLTKESTRASSE_18)
     client.get(URL, INSIDE_MOLTKESTRASSE_18)
 
@@ -126,16 +126,15 @@ def test_a_tile_is_imported_only_once(client, lod2_cache, monkeypatch):
 @pytest.mark.django_db(transaction=True)
 def test_parallel_lookups_in_a_new_tile_import_it_once(lod2_cache, monkeypatch):
     """Two threads with their own database connections, like two workers."""
-    calls = []
-    real_import = lookup.import_tile
+    saved_batches = []
+    real_save_batch = importer._save_batch
     both_ready = threading.Barrier(2)
 
-    def slow_import(tile, cache_dir):
-        calls.append(str(tile))
-        result = real_import(tile, cache_dir)
+    def slow_save_batch(tile, batch):
+        saved_batches.append(tile.id)
         # Keeps the import's transaction open while the other lookup arrives.
         time.sleep(0.5)
-        return result
+        return real_save_batch(tile, batch)
 
     def look_up(_):
         try:
@@ -144,12 +143,12 @@ def test_parallel_lookups_in_a_new_tile_import_it_once(lod2_cache, monkeypatch):
         finally:
             connection.close()
 
-    monkeypatch.setattr(lookup, "import_tile", slow_import)
+    monkeypatch.setattr(importer, "_save_batch", slow_save_batch)
     with ThreadPoolExecutor(max_workers=2) as pool:
         found = list(pool.map(look_up, range(2)))
 
     assert found == ["DEBW_0010007TuWn", "DEBW_0010007TuWn"]
-    assert calls == ["413_5316"]
+    assert saved_batches == ["413_5316"]
 
 
 @pytest.mark.django_db
@@ -175,7 +174,7 @@ def test_a_location_without_lod2_data_is_reported(client, monkeypatch):
     def missing(tile, cache_dir):
         raise TileNotAvailable(str(tile))
 
-    monkeypatch.setattr(lookup, "import_tile", missing)
+    monkeypatch.setattr(lookup, "import_tile_if_missing", missing)
     response = client.get(URL, INSIDE_MOLTKESTRASSE_18)
 
     assert response.status_code == 404
@@ -187,7 +186,7 @@ def test_an_unreachable_download_service_answers_503(client, monkeypatch):
     def unreachable(tile, cache_dir):
         raise TileDownloadFailed(str(tile))
 
-    monkeypatch.setattr(lookup, "import_tile", unreachable)
+    monkeypatch.setattr(lookup, "import_tile_if_missing", unreachable)
     response = client.get(URL, INSIDE_MOLTKESTRASSE_18)
 
     assert response.status_code == 503

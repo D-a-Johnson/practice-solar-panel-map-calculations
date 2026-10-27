@@ -8,6 +8,7 @@ import {
   type LngLat,
 } from "../../api/buildings";
 import { statusOf } from "../../api/http";
+import { ErrorBoundary } from "../ErrorBoundary";
 import { useI18n } from "../../i18n/language";
 import { DEFAULT_PANELS, faceDetail, faceName, isFlat } from "../../lib/setup";
 import { FaceSetup } from "./FaceSetup";
@@ -88,10 +89,10 @@ function BuildingDetails({
   const selected = [...building.roofs, ...building.walls].find(
     (face) => faceId(face) === selectedFaceId,
   );
-  const [kind, setKind] = useState<Face["kind"]>(
-    building.roofs.length > 0 ? "roof" : "wall",
-  );
-  const [panels, setPanels] = useState<number>(DEFAULT_PANELS.roof);
+  const firstKind =
+    building.roofs.length === 0 && building.walls.length > 0 ? "wall" : "roof";
+  const [kind, setKind] = useState<Face["kind"]>(firstKind);
+  const [panels, setPanels] = useState<number>(DEFAULT_PANELS[firstKind]);
   const [wattsPerPanel, setWattsPerPanel] = useState(440);
   const peakPowerKwp = (panels * wattsPerPanel) / 1000;
 
@@ -100,12 +101,13 @@ function BuildingDetails({
    * count; switching within a kind keeps what the user typed.
    */
   function choose(face: Face) {
-    if (selected && face.kind !== selected.kind) {
+    if (face.kind !== (selected?.kind ?? firstKind)) {
       setPanels(DEFAULT_PANELS[face.kind]);
     }
     onSelectFace(faceId(face));
   }
 
+  const faces = kind === "roof" ? building.roofs : building.walls;
   const tabs = [
     { value: "roof", label: t.building.roofFaces(building.roofs.length) },
     { value: "wall", label: t.building.walls(building.walls.length) },
@@ -145,11 +147,15 @@ function BuildingDetails({
         {kind === "wall" && (
           <p className="mb-1 text-xs text-slate-500">{t.building.wallsHint}</p>
         )}
-        <FaceList
-          faces={kind === "roof" ? building.roofs : building.walls}
-          selectedFaceId={selectedFaceId}
-          onChoose={choose}
-        />
+        {faces.length > 0 ? (
+          <FaceList
+            faces={faces}
+            selectedFaceId={selectedFaceId}
+            onChoose={choose}
+          />
+        ) : (
+          <Hint>{t.building.noFaces}</Hint>
+        )}
       </div>
 
       {selected && (
@@ -173,13 +179,21 @@ function BuildingDetails({
               {t.setup.peakPower(peakPowerKwp)}
             </span>
           </div>
-          <FaceSetup
+          {/**
+           * Keyed by face, so an error in one face's setup or estimate
+           * leaves the face list usable and choosing another face recovers.
+           */}
+          <ErrorBoundary
             key={faceId(selected)}
-            building={[name, building.locality].filter(Boolean).join(", ")}
-            face={selected}
-            location={location}
-            peakPowerKwp={peakPowerKwp}
-          />
+            fallback={<Hint>{t.crash.face}</Hint>}
+          >
+            <FaceSetup
+              building={[name, building.locality].filter(Boolean).join(", ")}
+              face={selected}
+              location={location}
+              peakPowerKwp={peakPowerKwp}
+            />
+          </ErrorBoundary>
         </div>
       )}
     </div>
@@ -217,7 +231,7 @@ function FaceList({ faces, selectedFaceId, onChoose }: FaceListProps) {
   );
 }
 
-/** Points the way the face looks, with north up like the map; flat is a dot. */
+/** The way the face looks on a compass with north up; flat faces get a dot. */
 function DirectionArrow({ face }: { face: Face }) {
   if (isFlat(face) || face.azimuth === null) {
     return (

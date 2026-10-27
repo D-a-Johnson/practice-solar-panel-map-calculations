@@ -2,10 +2,9 @@ from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
-from django.db import transaction
 from django.db.models import Q
 
-from buildings.importer import import_tile, lock_tile
+from buildings.importer import import_tile_if_missing
 from buildings.models import Building, Tile
 from buildings.tiles import (
     TileDownloadFailed,
@@ -46,13 +45,8 @@ def building_at(lon: float, lat: float) -> Building | None:
 
 
 def _ensure_imported(tile: TileId) -> None:
-    if Tile.objects.filter(id=str(tile)).exists():
-        return
-    with transaction.atomic():
-        lock_tile(tile)
-        # Another request may have imported the tile while this one waited.
-        if not Tile.objects.filter(id=str(tile)).exists():
-            import_tile(tile, settings.LOD2_CACHE_DIR)
+    if not Tile.objects.filter(id=str(tile)).exists():
+        import_tile_if_missing(tile, settings.LOD2_CACHE_DIR)
 
 
 def _nearest(point: Point) -> Building | None:

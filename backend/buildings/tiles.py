@@ -8,6 +8,7 @@ and an even north value, so a tile spans e.g. 413–415 km east and
 """
 
 import math
+import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -103,10 +104,15 @@ def download_tile(
 
 def _fetch(client: httpx.Client, tile: TileId, target: Path) -> None:
     """
-    Writes to a `.part` file and renames it at the end, so an interrupted
-    download never leaves a truncated zip that looks like a cached tile.
+    Downloads into a temporary file of its own and renames it at the end: an
+    interrupted download never leaves a truncated zip that looks like a
+    cached tile, and two requests downloading the same tile at once never
+    write into the same file.
     """
-    partial = target.with_name(target.name + ".part")
+    with tempfile.NamedTemporaryFile(
+        dir=target.parent, suffix=".part", delete=False
+    ) as file:
+        partial = Path(file.name)
     try:
         with client.stream("GET", tile.url) as response:
             if response.status_code == 404:
@@ -115,9 +121,11 @@ def _fetch(client: httpx.Client, tile: TileId, target: Path) -> None:
             with partial.open("wb") as file:
                 for chunk in response.iter_bytes():
                     file.write(chunk)
+        partial.replace(target)
     except httpx.HTTPError as error:
         raise TileDownloadFailed(f"Downloading tile {tile} failed: {error}") from error
-    partial.replace(target)
+    finally:
+        partial.unlink(missing_ok=True)
 
 
 def gml_members(zip_path: Path) -> list[str]:
