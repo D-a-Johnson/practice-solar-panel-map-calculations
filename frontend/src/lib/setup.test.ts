@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { Surface } from "../api/buildings";
+import type { Roof } from "../api/buildings";
 import { defaultMounting, isFlat, orientationFor } from "./setup";
 
-function face(tilt: number, azimuth: number | null): Surface {
+function face(tilt: number, azimuth: number | null): Roof {
   return {
     gml_id: "F1",
     kind: "roof",

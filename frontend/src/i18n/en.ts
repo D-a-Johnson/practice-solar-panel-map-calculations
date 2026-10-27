@@ -34,14 +34,18 @@ export const en = {
       "The map couldn't load. Check your internet connection and reload the page.",
   },
   building: {
-    start: "Click a building on the map to start.",
+    /** A non-breaking hyphen (\u2011) keeps the state's name on one line. */
+    startTitle: "Solar yield for any building in Baden\u2011Württemberg",
+    start: "Search an address above or click a building on the map.",
     loading: "Loading building…",
     none: "No building here. Click directly on a building.",
     withoutAddress: "Building without address",
     height: (metres: number) => `${number(metres, 1)} m high`,
     roofFaces: (count: number) => `Roof faces (${count})`,
     flat: "flat",
-    walls: (count: number) => `Walls for balcony panels (${count})`,
+    faces: "Roof faces or walls",
+    walls: (count: number) => `Balcony & walls (${count})`,
+    wallsHint: "For panels on a balcony railing or a facade.",
     wallWidth: (width: number) => `${number(width)} m wide`,
     face: (tilt: number, area: number) =>
       `${number(tilt)}° · ${number(area)} m²`,
@@ -165,6 +169,11 @@ export const en = {
     credits: "Data sources and licences",
     pvgis: "Solar yield: PVGIS © European Union",
     lgl: "Building and roof data: LGL-BW (2026) Datenlizenz Deutschland – Namensnennung – Version 2.0, www.lgl-bw.de",
+  },
+  crash: {
+    page: "Something went wrong while showing the page.",
+    reload: "Reload the page",
+    building: "This building can't be shown. Try another one.",
   },
   errors: {
     outsideArea: "This place is outside Baden-Württemberg.",

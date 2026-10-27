@@ -9,10 +9,11 @@ import {
 } from "../../api/buildings";
 import { statusOf } from "../../api/http";
 import { useI18n } from "../../i18n/language";
-import { DEFAULT_PANELS, faceName } from "../../lib/setup";
+import { DEFAULT_PANELS, faceDetail, faceName, isFlat } from "../../lib/setup";
 import { FaceSetup } from "./FaceSetup";
 import { Hint } from "./Hint";
 import { NumberInput } from "./NumberInput";
+import { SectionTitle } from "./SectionTitle";
 
 type BuildingPanelProps = {
   picked: LngLat | null;
@@ -30,7 +31,15 @@ export function BuildingPanel({
   const { t } = useI18n();
 
   if (!picked) {
-    return <Hint>{t.building.start}</Hint>;
+    return (
+      <div className="mt-10 text-center">
+        <img src="/favicon.svg" alt="" className="mx-auto size-12" />
+        <p className="mt-3 font-semibold text-balance">
+          {t.building.startTitle}
+        </p>
+        <p className="mt-1 text-sm text-slate-600">{t.building.start}</p>
+      </div>
+    );
   }
   if (query.isPending) {
     return <Hint>{t.building.loading}</Hint>;
@@ -76,8 +85,11 @@ function BuildingDetails({
 }: BuildingDetailsProps) {
   const { t } = useI18n();
   const name = title(building) || t.building.withoutAddress;
-  const selected = [...building.surfaces, ...building.walls].find(
+  const selected = [...building.roofs, ...building.walls].find(
     (face) => faceId(face) === selectedFaceId,
+  );
+  const [kind, setKind] = useState<Face["kind"]>(
+    building.roofs.length > 0 ? "roof" : "wall",
   );
   const [panels, setPanels] = useState<number>(DEFAULT_PANELS.roof);
   const [wattsPerPanel, setWattsPerPanel] = useState(440);
@@ -94,35 +106,55 @@ function BuildingDetails({
     onSelectFace(faceId(face));
   }
 
-  return (
-    <div>
-      <h2 className="font-semibold">{name}</h2>
-      <p className="text-sm text-slate-600">
-        {building.locality}
-        {building.measured_height !== null &&
-          ` · ${t.building.height(building.measured_height)}`}
-      </p>
+  const tabs = [
+    { value: "roof", label: t.building.roofFaces(building.roofs.length) },
+    { value: "wall", label: t.building.walls(building.walls.length) },
+  ] as const;
 
-      <FaceList
-        title={t.building.roofFaces(building.surfaces.length)}
-        faces={building.surfaces}
-        detail={(roof) => t.building.face(roof.tilt, roof.area)}
-        selectedFaceId={selectedFaceId}
-        onChoose={choose}
-      />
-      {building.walls.length > 0 && (
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold">{name}</h2>
+        <p className="text-sm text-slate-600">
+          {building.locality}
+          {building.measured_height !== null &&
+            ` · ${t.building.height(building.measured_height)}`}
+        </p>
+      </div>
+
+      <div>
+        {building.walls.length > 0 && (
+          <div
+            role="group"
+            aria-label={t.building.faces}
+            className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 text-sm"
+          >
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                aria-pressed={kind === tab.value}
+                onClick={() => setKind(tab.value)}
+                className="rounded-md px-2 py-1 text-slate-600 aria-pressed:bg-white aria-pressed:font-medium aria-pressed:text-slate-900 aria-pressed:shadow-sm"
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {kind === "wall" && (
+          <p className="mb-1 text-xs text-slate-500">{t.building.wallsHint}</p>
+        )}
         <FaceList
-          title={t.building.walls(building.walls.length)}
-          faces={building.walls}
-          detail={(wall) => t.building.wallWidth(wall.width)}
+          faces={kind === "roof" ? building.roofs : building.walls}
           selectedFaceId={selectedFaceId}
           onChoose={choose}
         />
-      )}
+      </div>
 
       {selected && (
-        <>
-          <h3 className="mt-4 text-sm font-semibold">{t.setup.title}</h3>
+        <div className="border-t border-slate-200 pt-4">
+          <SectionTitle>{t.setup.title}</SectionTitle>
           <div className="mt-2 flex items-center gap-2 text-sm">
             <NumberInput
               label={t.setup.panels}
@@ -148,48 +180,61 @@ function BuildingDetails({
             location={location}
             peakPowerKwp={peakPowerKwp}
           />
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-type FaceListProps<F extends Face> = {
-  title: string;
-  faces: F[];
-  detail: (face: F) => string;
+type FaceListProps = {
+  faces: Face[];
   selectedFaceId: string | null;
-  onChoose: (face: F) => void;
+  onChoose: (face: Face) => void;
 };
 
-function FaceList<F extends Face>({
-  title,
-  faces,
-  detail,
-  selectedFaceId,
-  onChoose,
-}: FaceListProps<F>) {
+function FaceList({ faces, selectedFaceId, onChoose }: FaceListProps) {
   const { t } = useI18n();
 
   return (
-    <>
-      <h3 className="mt-4 text-sm font-semibold">{title}</h3>
-      <ul className="mt-2 max-h-48 overflow-y-auto text-sm">
-        {faces.map((face) => (
-          <li key={faceId(face)}>
-            <button
-              type="button"
-              aria-pressed={faceId(face) === selectedFaceId}
-              onClick={() => onChoose(face)}
-              className="flex w-full justify-between rounded px-2 py-1.5 text-left hover:bg-slate-100 aria-pressed:bg-amber-100"
-            >
-              <span>{faceName(face, t)}</span>
-              <span className="text-slate-600">{detail(face)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </>
+    <ul className="max-h-48 overflow-y-auto text-sm">
+      {faces.map((face) => (
+        <li key={faceId(face)}>
+          <button
+            type="button"
+            aria-pressed={faceId(face) === selectedFaceId}
+            onClick={() => onChoose(face)}
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left hover:bg-slate-100 aria-pressed:bg-amber-100 aria-pressed:font-medium"
+          >
+            <DirectionArrow face={face} />
+            <span>{faceName(face, t)}</span>
+            <span className="ml-auto text-slate-600">
+              {faceDetail(face, t)}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Points the way the face looks, with north up like the map; flat is a dot. */
+function DirectionArrow({ face }: { face: Face }) {
+  if (isFlat(face) || face.azimuth === null) {
+    return (
+      <span aria-hidden="true" className="grid size-4 place-items-center">
+        <span className="size-1.5 rounded-full bg-slate-400" />
+      </span>
+    );
+  }
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className="size-4 text-amber-600"
+      style={{ transform: `rotate(${face.azimuth}deg)` }}
+    >
+      <path d="M8 1 13 14 8 11 3 14Z" fill="currentColor" />
+    </svg>
   );
 }
 

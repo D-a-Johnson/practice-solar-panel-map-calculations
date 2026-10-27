@@ -189,7 +189,7 @@ function toFeatures(
         geometry: building.footprint,
         properties: { kind: "footprint" },
       },
-      ...building.surfaces.map((roof) => ({
+      ...building.roofs.map((roof) => ({
         type: "Feature" as const,
         geometry: roof.geometry,
         properties: { kind: "roof", selected: roof.gml_id === selectedFaceId },

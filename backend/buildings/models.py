@@ -23,16 +23,16 @@ class Building(models.Model):
         return self.gml_id
 
 
-class Surface(models.Model):
-    class Kind(models.TextChoices):
-        ROOF = "roof"
-        WALL = "wall"
+class Roof(models.Model):
+    """
+    One roof face. Walls aren't stored: they come from the footprint (see
+    facades.py).
+    """
 
     building = models.ForeignKey(
-        Building, on_delete=models.CASCADE, related_name="surfaces"
+        Building, on_delete=models.CASCADE, related_name="roofs"
     )
     gml_id = models.CharField(max_length=64, unique=True)
-    kind = models.CharField(max_length=4, choices=Kind)
     roof_type = models.CharField(max_length=8, blank=True)
     geometry = models.PolygonField(srid=25832, dim=3)
     area = models.FloatField()

@@ -57,6 +57,9 @@ jobs:
       - run: uv run python manage.py check
       - run: uv run python manage.py makemigrations --check --dry-run
       - run: uv run pytest
+      # The frontend's API types are generated from openapi.yaml, so the
+      # committed file has to match what the code describes.
+      - run: uv run python manage.py spectacular --file openapi.yaml && git diff --exit-code openapi.yaml
 
   frontend:
     runs-on: ubuntu-24.04
@@ -76,6 +79,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
+      - run: pnpm api:types && git diff --exit-code src/api/schema.d.ts
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build

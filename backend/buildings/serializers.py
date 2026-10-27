@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 from buildings.facades import facades
 from buildings.geometry import DIRECTIONS, direction_label
-from buildings.models import Building, Surface
+from buildings.models import Building, Roof
 
 # Baden-Württemberg's bounding box from OpenStreetMap (Nominatim) as
 # [west, south, east, north]; the frontend's region.ts uses the same numbers.
@@ -26,14 +26,22 @@ def wgs84_geojson(field: str) -> AsGeoJSON:
     return AsGeoJSON(Transform(field, 4326), precision=GEOJSON_DECIMALS)
 
 
+# How deeply each GeoJSON geometry nests its coordinate arrays: a LineString
+# is a list of positions, a Polygon a list of rings, and so on.
+GEOJSON_NESTING = {"LineString": 2, "Polygon": 3, "MultiPolygon": 4}
+
+
 def geojson_schema(geometry_type: str) -> dict:
     """The OpenAPI description of a GeoJSON geometry in longitude/latitude."""
+    coordinates: dict = {"type": "number"}
+    for _ in range(GEOJSON_NESTING[geometry_type]):
+        coordinates = {"type": "array", "items": coordinates}
     return {
         "type": "object",
         "description": f"GeoJSON {geometry_type} in WGS84 longitude/latitude",
         "properties": {
             "type": {"type": "string", "enum": [geometry_type]},
-            "coordinates": {"type": "array", "items": {}},
+            "coordinates": coordinates,
         },
         "required": ["type", "coordinates"],
     }
@@ -50,14 +58,15 @@ class LocationSerializer(serializers.Serializer):
         return data
 
 
-class SurfaceSerializer(serializers.ModelSerializer):
-    """Expects surfaces annotated with `geojson` (see BuildingSerializer)."""
+class RoofSerializer(serializers.ModelSerializer):
+    """One roof face, from LGL's LoD2 data."""
 
+    kind = serializers.SerializerMethodField()
     direction = serializers.SerializerMethodField()
     geometry = serializers.SerializerMethodField()
 
     class Meta:
-        model = Surface
+        model = Roof
         fields = (
             "gml_id",
             "kind",
@@ -68,18 +77,25 @@ class SurfaceSerializer(serializers.ModelSerializer):
             "direction",
             "geometry",
         )
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.ChoiceField(["roof"]))
+    def get_kind(self, roof: Roof) -> str:
+        """Lets clients tell roofs and walls apart in one list."""
+        return "roof"
 
     @extend_schema_field(serializers.ChoiceField(DIRECTIONS, allow_null=True))
-    def get_direction(self, surface: Surface) -> str | None:
-        return None if surface.azimuth is None else direction_label(surface.azimuth)
+    def get_direction(self, roof: Roof) -> str | None:
+        return None if roof.azimuth is None else direction_label(roof.azimuth)
 
+    # Reads the `geojson` annotation that BuildingSerializer.get_roofs adds.
     @extend_schema_field(geojson_schema("Polygon"))
-    def get_geometry(self, surface: Surface) -> dict:
-        return json.loads(surface.geojson)
+    def get_geometry(self, roof: Roof) -> dict:
+        return json.loads(roof.geojson)
 
 
 class WallSerializer(serializers.Serializer):
-    """A facade taken from the building's footprint (see facades.py)."""
+    """A wall, taken from an edge of the building's footprint."""
 
     id = serializers.CharField()
     kind = serializers.ChoiceField(["wall"])
@@ -94,15 +110,13 @@ class WallSerializer(serializers.Serializer):
         return wall["geometry"]
 
 
+# PostGIS converts the geometries to GeoJSON in the same query that loads
+# them: 2 ms instead of 112 ms in Python for the Minster's 140 roof faces.
 class BuildingSerializer(serializers.ModelSerializer):
-    """
-    Geometries are converted to GeoJSON by PostGIS in the same query that
-    loads them: 2 ms instead of 112 ms in Python for the Minster's 140 roof
-    faces.
-    """
+    """A building from LGL's LoD2 data, with its roof faces and walls."""
 
     footprint = serializers.SerializerMethodField()
-    surfaces = serializers.SerializerMethodField()
+    roofs = serializers.SerializerMethodField()
     walls = serializers.SerializerMethodField()
 
     class Meta:
@@ -116,9 +130,10 @@ class BuildingSerializer(serializers.ModelSerializer):
             "house_number",
             "locality",
             "footprint",
-            "surfaces",
+            "roofs",
             "walls",
         )
+        read_only_fields = fields
 
     @extend_schema_field(geojson_schema("MultiPolygon"))
     def get_footprint(self, building: Building) -> dict:
@@ -130,12 +145,12 @@ class BuildingSerializer(serializers.ModelSerializer):
         )
         return json.loads(footprint)
 
-    @extend_schema_field(SurfaceSerializer(many=True))
-    def get_surfaces(self, building: Building) -> list:
-        surfaces = building.surfaces.order_by("-area").annotate(
+    @extend_schema_field(RoofSerializer(many=True))
+    def get_roofs(self, building: Building) -> list:
+        roofs = building.roofs.order_by("-area").annotate(
             geojson=wgs84_geojson("geometry")
         )
-        return SurfaceSerializer(surfaces, many=True).data
+        return RoofSerializer(roofs, many=True).data
 
     @extend_schema_field(WallSerializer(many=True))
     def get_walls(self, building: Building) -> list:

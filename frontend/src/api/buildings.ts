@@ -1,50 +1,16 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
-import type { LineString, MultiPolygon, Polygon } from "geojson";
-
 import { ApiError } from "./http";
+import type { components } from "./schema";
 
 export type LngLat = { lng: number; lat: number };
 
-export type Direction = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
+export type Direction = components["schemas"]["DirectionEnum"];
+export type Roof = components["schemas"]["Roof"];
+export type Wall = components["schemas"]["Wall"];
+/** Roofs come largest first, walls widest first. */
+export type Building = components["schemas"]["Building"];
 
-export type Surface = {
-  gml_id: string;
-  kind: "roof";
-  roof_type: string;
-  area: number;
-  tilt: number;
-  azimuth: number | null;
-  direction: Direction | null;
-  geometry: Polygon;
-};
-
-/** A facade from the building's footprint, for balcony and wall panels. */
-export type Wall = {
-  id: string;
-  kind: "wall";
-  tilt: number;
-  azimuth: number;
-  direction: Direction;
-  width: number;
-  geometry: LineString;
-};
-
-export type Face = Surface | Wall;
-
-export type Building = {
-  gml_id: string;
-  name: string;
-  function: string;
-  measured_height: number | null;
-  street: string;
-  house_number: string;
-  locality: string;
-  footprint: MultiPolygon;
-  /** Roof faces only (walls aren't imported), largest first. */
-  surfaces: Surface[];
-  /** Widest first. */
-  walls: Wall[];
-};
+export type Face = Roof | Wall;
 
 export function faceId(face: Face): string {
   return face.kind === "roof" ? face.gml_id : face.id;

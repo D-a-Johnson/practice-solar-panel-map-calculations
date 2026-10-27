@@ -1,5 +1,5 @@
 """
-Turns a downloaded LoD2 tile into Building and Surface rows.
+Turns a downloaded LoD2 tile into Building and Roof rows.
 
 A tile is imported in one transaction and replaces any earlier import of
 the same tile, so a failed import leaves nothing half-written behind.
@@ -12,11 +12,11 @@ from itertools import batched
 from pathlib import Path
 
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon, Polygon
-from django.db import transaction
+from django.db import connection, transaction
 
 from buildings.geometry import area, orientation
 from buildings.lod2_parser import Address, ParsedBuilding, ParsedSurface, iter_buildings
-from buildings.models import Building, Surface, Tile
+from buildings.models import Building, Roof, Tile
 from buildings.tiles import TileId, download_tile
 
 # A face below this size cannot hold even one solar module (a standard one
@@ -29,22 +29,37 @@ BATCH_SIZE = 1000
 class ImportResult:
     tile: str
     buildings: int
-    surfaces: int
+    roofs: int
     skipped_existing: int
 
 
 def import_tile(tile_id: TileId, cache_dir: Path) -> ImportResult:
-    zip_path = download_tile(tile_id, cache_dir)
-    buildings = surfaces = skipped = 0
+    buildings = roofs = skipped = 0
     with transaction.atomic():
+        lock_tile(tile_id)
+        zip_path = download_tile(tile_id, cache_dir)
         Tile.objects.filter(id=str(tile_id)).delete()
         tile = Tile.objects.create(id=str(tile_id))
         for batch in batched(iter_buildings(zip_path), BATCH_SIZE, strict=False):
-            saved, saved_surfaces, existing = _save_batch(tile, batch)
+            saved, saved_roofs, existing = _save_batch(tile, batch)
             buildings += saved
-            surfaces += saved_surfaces
+            roofs += saved_roofs
             skipped += existing
-    return ImportResult(str(tile_id), buildings, surfaces, skipped)
+    return ImportResult(str(tile_id), buildings, roofs, skipped)
+
+
+def lock_tile(tile_id: TileId) -> None:
+    """
+    Makes imports of the same tile wait for each other, across all processes
+    (gunicorn workers, import commands), until the current transaction ends.
+    Without it, a second import would download into the same .part file and
+    then fail on the duplicate Tile row.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT pg_advisory_xact_lock(%s, %s)",
+            [tile_id.east_km, tile_id.north_km],
+        )
 
 
 def _save_batch(tile: Tile, batch: Iterable[ParsedBuilding]) -> tuple[int, int, int]:
@@ -61,13 +76,13 @@ def _save_batch(tile: Tile, batch: Iterable[ParsedBuilding]) -> tuple[int, int, 
     )
     new = [p for p in parsed if p.gml_id not in existing]
     rows = Building.objects.bulk_create([_building_row(tile, p) for p in new])
-    surface_rows = [
-        surface
+    roof_rows = [
+        roof
         for row, building in zip(rows, new, strict=True)
-        for surface in _surface_rows(row, building.surfaces)
+        for roof in _roof_rows(row, building.surfaces)
     ]
-    Surface.objects.bulk_create(surface_rows)
-    return len(rows), len(surface_rows), len(existing)
+    Roof.objects.bulk_create(roof_rows)
+    return len(rows), len(roof_rows), len(existing)
 
 
 def _building_row(tile: Tile, parsed: ParsedBuilding) -> Building:
@@ -85,7 +100,7 @@ def _building_row(tile: Tile, parsed: ParsedBuilding) -> Building:
     )
 
 
-def _surface_rows(building: Building, parsed: Iterable[ParsedSurface]) -> list[Surface]:
+def _roof_rows(building: Building, parsed: Iterable[ParsedSurface]) -> list[Roof]:
     rows = []
     for surface in parsed:
         if surface.kind != "roof":
@@ -95,10 +110,9 @@ def _surface_rows(building: Building, parsed: Iterable[ParsedSurface]) -> list[S
             continue
         facing = orientation(surface.exterior, facing_up=True)
         rows.append(
-            Surface(
+            Roof(
                 building=building,
                 gml_id=surface.gml_id,
-                kind=surface.kind,
                 roof_type=surface.roof_type or "",
                 geometry=Polygon(surface.exterior, *surface.holes, srid=25832),
                 area=face_area,

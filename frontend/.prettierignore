@@ -2,3 +2,4 @@ dist
 pnpm-lock.yaml
 test-results
 playwright-report
+src/api/schema.d.ts

@@ -75,7 +75,7 @@ test("clicking a building on the map selects it", async ({ page }) => {
   await expect(page.getByRole("option")).toHaveCount(1);
   await search.press("Enter");
   await expect(
-    page.getByText("Click a building on the map to start."),
+    page.getByText("Search an address above or click a building on the map."),
   ).toBeVisible();
 
   await page.getByRole("region", { name: "Map" }).click();
@@ -155,6 +155,7 @@ test("a wall gives a balcony estimate with two panels", async ({ page }) => {
   await searchField(page).fill("Moltkestraße 18");
   await page.getByRole("option", { name: /Moltkestraße 18/ }).click();
 
+  await page.getByRole("button", { name: "Balcony & walls (4)" }).click();
   await page.getByRole("button", { name: "S 10 m wide" }).click();
 
   await expect(page.getByRole("spinbutton", { name: "Panels" })).toHaveValue(

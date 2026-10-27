@@ -21,7 +21,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Tile {result.tile}: {result.buildings} buildings, "
-                f"{result.surfaces} surfaces, {result.skipped_existing} already "
+                f"{result.roofs} roof faces, {result.skipped_existing} already "
                 "stored from a neighbouring tile"
             )
         )

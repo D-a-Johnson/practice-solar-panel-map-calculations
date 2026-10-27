@@ -5,7 +5,7 @@ import pytest
 from django.contrib.gis.geos import GeometryCollection, LineString, Point, Polygon
 
 from buildings.importer import MIN_SURFACE_AREA_M2, _as_multipolygon, import_tile
-from buildings.models import Building, Surface, Tile
+from buildings.models import Building, Roof, Tile
 from buildings.tiles import TileId
 
 FIXTURE = Path(__file__).parent / "fixtures" / "freiburg_two_buildings.gml"
@@ -39,16 +39,15 @@ def test_building_parts_share_one_footprint(cache_dir):
 
 
 @pytest.mark.django_db
-def test_surfaces_are_roofs_with_precomputed_orientation(cache_dir):
+def test_roofs_are_stored_with_precomputed_orientation(cache_dir):
     import_tile(TILE, cache_dir)
 
-    house = Surface.objects.filter(building__gml_id="DEBW_0010007TuWn")
-    assert not Surface.objects.filter(kind="wall").exists()
-    roofs = sorted(house.filter(kind="roof"), key=lambda r: r.azimuth)
+    house = Roof.objects.filter(building__gml_id="DEBW_0010007TuWn")
+    roofs = sorted(house, key=lambda r: r.azimuth)
     assert [round(r.azimuth, 1) for r in roofs] == [100.1, 280.1]
     assert all(r.roof_type == "3100" for r in roofs)
     assert roofs[0].geometry.hasz
-    assert not Surface.objects.filter(area__lt=MIN_SURFACE_AREA_M2).exists()
+    assert not Roof.objects.filter(area__lt=MIN_SURFACE_AREA_M2).exists()
 
 
 @pytest.mark.django_db
@@ -68,7 +67,7 @@ def test_reimporting_a_tile_replaces_it(cache_dir):
 
     assert second == first
     assert Building.objects.count() == 2
-    assert Surface.objects.count() == first.surfaces
+    assert Roof.objects.count() == first.roofs
 
 
 @pytest.mark.django_db

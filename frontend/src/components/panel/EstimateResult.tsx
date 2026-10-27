@@ -47,20 +47,25 @@ export function EstimateResult({
     : undefined;
 
   return (
-    <section aria-label={t.estimate.label} className="mt-4">
-      <p className="text-2xl font-semibold">
-        {t.estimate.kwh(annualKwh)}
-        <span className="text-base font-normal text-slate-600">
-          {" "}
-          {t.estimate.perYear}
-        </span>
-      </p>
-      <p className="text-sm text-slate-600">{t.estimate.perKwp(annual)}</p>
-      <MonthlyChart values={monthlyKwh} />
-      <p className="mt-2 text-xs text-slate-500">{t.estimate.source}</p>
+    <section
+      aria-label={t.estimate.label}
+      className="mt-5 border-t border-slate-200 pt-4"
+    >
+      <div className="rounded-lg bg-amber-50 p-3">
+        <p className="text-2xl font-semibold">
+          {t.estimate.kwh(annualKwh)}
+          <span className="text-base font-normal text-slate-600">
+            {" "}
+            {t.estimate.perYear}
+          </span>
+        </p>
+        <p className="text-sm text-slate-600">{t.estimate.perKwp(annual)}</p>
+        <MonthlyChart values={monthlyKwh} />
+        <p className="mt-2 text-xs text-slate-500">{t.estimate.source}</p>
+      </div>
 
       {money && (
-        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
           <Figure
             label={t.estimate.savings}
             value={t.estimate.euros(money.savingsPerYear)}
@@ -96,7 +101,7 @@ export function EstimateResult({
 
 function Figure({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="rounded-lg border border-slate-200 px-3 py-2">
       <dt className="text-xs text-slate-600">{label}</dt>
       <dd className="font-semibold">{value}</dd>
     </div>

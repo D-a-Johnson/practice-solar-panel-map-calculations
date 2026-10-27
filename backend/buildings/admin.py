@@ -1,6 +1,6 @@
 from django.contrib.gis import admin
 
-from buildings.models import Building, Surface
+from buildings.models import Building, Roof
 
 
 @admin.register(Building)
@@ -17,17 +17,16 @@ class BuildingAdmin(admin.GISModelAdmin):
     list_filter = ("tile",)
 
 
-@admin.register(Surface)
-class SurfaceAdmin(admin.ModelAdmin):
+@admin.register(Roof)
+class RoofAdmin(admin.ModelAdmin):
     list_display = (
         "gml_id",
         "building",
-        "kind",
         "roof_type",
         "area",
         "tilt",
         "azimuth",
     )
-    list_filter = ("kind", "roof_type")
+    list_filter = ("roof_type",)
     list_select_related = ("building",)
     raw_id_fields = ("building",)

@@ -4,6 +4,7 @@ import type { Face, LngLat } from "../../api/buildings";
 import {
   COMPASS,
   defaultMounting,
+  faceDetail,
   faceName,
   faceOrientation,
   isFlat,
@@ -88,11 +89,7 @@ export function FaceSetup({
         subject={{
           building,
           faceLabel: face.kind === "wall" ? t.report.wall : t.report.roofFace,
-          face: `${faceName(face, t)}, ${
-            face.kind === "wall"
-              ? t.building.wallWidth(face.width)
-              : t.building.face(face.tilt, face.area)
-          }`,
+          face: `${faceName(face, t)}, ${faceDetail(face, t)}`,
         }}
         query={{ lat: location.lat, lon: location.lng, ...orientation }}
         peakPowerKwp={peakPowerKwp}

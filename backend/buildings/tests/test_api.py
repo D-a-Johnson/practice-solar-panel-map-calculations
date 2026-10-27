@@ -1,8 +1,12 @@
+import threading
+import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 from django.contrib.gis.geos import Point
+from django.db import connection
 
 from buildings import lookup
 from buildings.models import Building, Tile
@@ -56,17 +60,15 @@ def test_returns_the_building_under_the_click(client, lod2_cache):
 
 
 @pytest.mark.django_db
-def test_surfaces_are_roofs_largest_first_with_direction_and_3d_geometry(
-    client, lod2_cache
-):
-    surfaces = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()["surfaces"]
+def test_roofs_largest_first_with_direction_and_3d_geometry(client, lod2_cache):
+    roofs = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()["roofs"]
 
-    assert [(s["kind"], s["direction"]) for s in surfaces] == [
+    assert [(r["kind"], r["direction"]) for r in roofs] == [
         ("roof", "W"),
         ("roof", "E"),
     ]
-    assert surfaces[0]["area"] == pytest.approx(68.1, abs=0.05)
-    assert len(surfaces[0]["geometry"]["coordinates"][0][0]) == 3
+    assert roofs[0]["area"] == pytest.approx(68.1, abs=0.05)
+    assert len(roofs[0]["geometry"]["coordinates"][0][0]) == 3
 
 
 @pytest.mark.django_db
@@ -87,7 +89,7 @@ def test_walls_come_from_the_footprint_widest_first_as_lon_lat_lines(
 def test_coordinates_are_rounded_to_seven_decimals(client, lod2_cache):
     body = client.get(URL, INSIDE_MOLTKESTRASSE_18).json()
     lon, lat = body["footprint"]["coordinates"][0][0][0]
-    roof_lon = body["surfaces"][0]["geometry"]["coordinates"][0][0][0]
+    roof_lon = body["roofs"][0]["geometry"]["coordinates"][0][0][0]
     for value in (lon, lat, roof_lon):
         assert value == round(value, 7)
 
@@ -118,6 +120,35 @@ def test_a_tile_is_imported_only_once(client, lod2_cache, monkeypatch):
     client.get(URL, INSIDE_MOLTKESTRASSE_18)
     client.get(URL, INSIDE_MOLTKESTRASSE_18)
 
+    assert calls == ["413_5316"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_parallel_lookups_in_a_new_tile_import_it_once(lod2_cache, monkeypatch):
+    """Two threads with their own database connections, like two workers."""
+    calls = []
+    real_import = lookup.import_tile
+    both_ready = threading.Barrier(2)
+
+    def slow_import(tile, cache_dir):
+        calls.append(str(tile))
+        result = real_import(tile, cache_dir)
+        # Keeps the import's transaction open while the other lookup arrives.
+        time.sleep(0.5)
+        return result
+
+    def look_up(_):
+        try:
+            both_ready.wait()
+            return lookup.building_at(**INSIDE_MOLTKESTRASSE_18).gml_id
+        finally:
+            connection.close()
+
+    monkeypatch.setattr(lookup, "import_tile", slow_import)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        found = list(pool.map(look_up, range(2)))
+
+    assert found == ["DEBW_0010007TuWn", "DEBW_0010007TuWn"]
     assert calls == ["413_5316"]
 
 

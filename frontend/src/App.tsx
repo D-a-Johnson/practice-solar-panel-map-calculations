@@ -5,9 +5,11 @@ import { type LngLat, useBuildingAt } from "./api/buildings";
 import { AddressSearch } from "./components/AddressSearch";
 import { ApiStatus } from "./components/ApiStatus";
 import { AssumptionsProvider } from "./components/AssumptionsProvider";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MapView } from "./components/map/MapView";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { BuildingPanel } from "./components/panel/BuildingPanel";
+import { Hint } from "./components/panel/Hint";
 import { useI18n } from "./i18n/language";
 
 /**
@@ -22,7 +24,7 @@ export default function App() {
   const building = useBuildingAt(picked);
 
   const largestRoofId = building.data
-    ? building.data.surfaces[0]?.gml_id
+    ? building.data.roofs[0]?.gml_id
     : undefined;
   const selectedFaceId = chosenFaceId ?? largestRoofId ?? null;
 
@@ -68,12 +70,22 @@ export default function App() {
               aria-label={t.results}
               className="overflow-y-auto border-t border-slate-200 bg-white p-4 md:border-t-0 md:border-l"
             >
-              <BuildingPanel
-                picked={picked}
-                query={building}
-                selectedFaceId={selectedFaceId}
-                onSelectFace={setChosenFaceId}
-              />
+              {/**
+               * A new key for every picked point gives the panel a fresh
+               * boundary, so choosing another building recovers from an
+               * error while the map keeps working.
+               */}
+              <ErrorBoundary
+                key={JSON.stringify(picked)}
+                fallback={<Hint>{t.crash.building}</Hint>}
+              >
+                <BuildingPanel
+                  picked={picked}
+                  query={building}
+                  selectedFaceId={selectedFaceId}
+                  onSelectFace={setChosenFaceId}
+                />
+              </ErrorBoundary>
             </aside>
           </main>
         </div>

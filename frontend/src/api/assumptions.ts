@@ -2,19 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { EconomicsInputs } from "../lib/economics";
 import { ApiError } from "./http";
+import type { components } from "./schema";
 
 export type AssumptionKey = keyof EconomicsInputs;
-
-export type Assumption = {
-  label: string;
-  value: number;
-  unit: string;
-  source: string;
-  source_url: string;
-  as_of: string;
-};
-
-export type Assumptions = Record<AssumptionKey, Assumption>;
+export type Assumption = components["schemas"]["Assumption"];
+export type Assumptions = components["schemas"]["Assumptions"];
 
 export async function fetchAssumptions(): Promise<Assumptions> {
   const response = await fetch("/api/assumptions");

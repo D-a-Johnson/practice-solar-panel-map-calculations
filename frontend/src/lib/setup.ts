@@ -42,6 +42,13 @@ export function faceName(face: Face, t: Messages): string {
     : t.directions[face.direction];
 }
 
+/** "49° · 528 m²" for a roof, "10 m wide" for a wall. */
+export function faceDetail(face: Face, t: Messages): string {
+  return face.kind === "roof"
+    ? t.building.face(face.tilt, face.area)
+    : t.building.wallWidth(face.width);
+}
+
 export function defaultMounting(face: Face): Mounting {
   return isFlat(face) ? "stands" : "flush";
 }

@@ -4,7 +4,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LanguageProvider } from "./components/LanguageProvider";
+import { PageError } from "./components/PageError";
 
 const queryClient = new QueryClient();
 
@@ -12,7 +14,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <App />
+        <ErrorBoundary fallback={<PageError />}>
+          <App />
+        </ErrorBoundary>
       </LanguageProvider>
       <ReactQueryDevtools />
     </QueryClientProvider>

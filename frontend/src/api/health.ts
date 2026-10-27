@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 
-export type Health = {
-  status: "ok";
-  postgis: string;
-};
+import type { components } from "./schema";
+
+export type Health = components["schemas"]["Health"];
 
 /**
  * `fetch` does not reject on HTTP error statuses, so a 503 (database down)

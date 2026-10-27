@@ -110,7 +110,7 @@
               "});",
               "",
               "pm.test(\"lists the west roof face first\", () => {",
-              "  const roof = body.surfaces[0];",
+              "  const roof = body.roofs[0];",
               "  pm.expect(roof.kind).to.eql(\"roof\");",
               "  pm.expect(roof.direction).to.eql(\"W\");",
               "  pm.expect(roof.tilt).to.be.within(39, 40);",

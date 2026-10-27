@@ -29,14 +29,17 @@ export const de: Messages = {
       "Die Karte konnte nicht geladen werden. Bitte die Internetverbindung prüfen und die Seite neu laden.",
   },
   building: {
-    start: "Zum Starten ein Gebäude in der Karte anklicken.",
+    startTitle: "Solarertrag für jedes Gebäude in Baden\u2011Württemberg",
+    start: "Oben eine Adresse suchen oder ein Gebäude in der Karte anklicken.",
     loading: "Gebäude wird geladen …",
     none: "Hier ist kein Gebäude. Bitte direkt auf ein Gebäude klicken.",
     withoutAddress: "Gebäude ohne Adresse",
     height: (metres: number) => `${number(metres, 1)} m hoch`,
     roofFaces: (count: number) => `Dachflächen (${count})`,
     flat: "flach",
-    walls: (count: number) => `Wände für Balkonkraftwerke (${count})`,
+    faces: "Dachflächen oder Wände",
+    walls: (count: number) => `Balkon & Wände (${count})`,
+    wallsHint: "Für Module am Balkongeländer oder an der Fassade.",
     wallWidth: (width: number) => `${number(width)} m breit`,
     face: (tilt: number, area: number) =>
       `${number(tilt)}° · ${number(area)} m²`,
@@ -161,6 +164,12 @@ export const de: Messages = {
     credits: "Datenquellen und Lizenzen",
     pvgis: "Solarertrag: PVGIS © Europäische Union",
     lgl: "Gebäude- und Dachdaten: LGL-BW (2026) Datenlizenz Deutschland – Namensnennung – Version 2.0, www.lgl-bw.de",
+  },
+  crash: {
+    page: "Beim Anzeigen der Seite ist etwas schiefgelaufen.",
+    reload: "Seite neu laden",
+    building:
+      "Dieses Gebäude kann nicht angezeigt werden. Bitte ein anderes wählen.",
   },
   errors: {
     outsideArea: "Dieser Ort liegt außerhalb von Baden-Württemberg.",

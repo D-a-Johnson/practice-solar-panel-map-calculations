@@ -1,18 +1,10 @@
 import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
 
 import { ApiError } from "./http";
+import type { components, paths } from "./schema";
 
-export type YieldQuery = {
-  lat: number;
-  lon: number;
-  tilt: number;
-  azimuth: number;
-};
-
-export type YieldPerKwp = {
-  annual_kwh_per_kwp: number;
-  monthly_kwh_per_kwp: number[];
-};
+export type YieldQuery = paths["/api/estimates"]["get"]["parameters"]["query"];
+export type YieldPerKwp = components["schemas"]["YieldPerKwp"];
 
 export async function fetchYieldPerKwp(
   query: YieldQuery,

@@ -1,0 +1,462 @@
+openapi: 3.0.3
+info:
+  title: Solar estimator API
+  version: 1.0.0
+  description: Buildings in Baden-Württemberg with their roof faces and walls (from
+    LGL's LoD2 data), PVGIS yield per kWp, and the assumptions for savings and payback.
+paths:
+  /api/assumptions:
+    get:
+      operationId: assumptions_retrieve
+      description: |-
+        Default values for the economics, keyed by name (for example
+        ``electricity_price``), each with its source. Editable in the Django
+        admin.
+      summary: Assumptions for savings and payback
+      tags:
+      - assumptions
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Assumptions'
+          description: ''
+  /api/buildings/at:
+    get:
+      operationId: buildings_at_retrieve
+      description: |-
+        The building under the point, or the nearest one within 5 m, with its
+        roof faces and walls. The first request in a new area downloads and
+        imports an LGL tile, which takes about 10 seconds.
+      summary: Building at a location
+      parameters:
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: lon
+        schema:
+          type: number
+          format: double
+        required: true
+      tags:
+      - buildings
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Building'
+          description: ''
+        '400':
+          description: A query parameter is missing or invalid, or the location is
+            outside Baden-Württemberg. The body lists the messages per parameter.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: No LoD2 data, or no building, at this location.
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The LGL download service is not reachable.
+  /api/estimates:
+    get:
+      operationId: estimates_retrieve
+      description: |-
+        Yield for 1 kWp. It scales linearly with system size, so clients
+        multiply by their own kWp instead of asking again for every size.
+      summary: Yield per kWp
+      parameters:
+      - in: query
+        name: azimuth
+        schema:
+          type: number
+          format: double
+          maximum: 360
+          minimum: 0
+        required: true
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: lon
+        schema:
+          type: number
+          format: double
+        required: true
+      - in: query
+        name: tilt
+        schema:
+          type: number
+          format: double
+          maximum: 90
+          minimum: 0
+        required: true
+      tags:
+      - estimates
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YieldPerKwp'
+          description: ''
+        '400':
+          description: A query parameter is missing or invalid, or the location is
+            outside Baden-Württemberg. The body lists the messages per parameter.
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Detail'
+          description: The PVGIS yield service is not reachable.
+  /api/health:
+    get:
+      operationId: health_retrieve
+      description: |-
+        Report whether the API is up and can query PostGIS.
+
+        One cheap query proves the whole chain works: Django, the database
+        connection, and the PostGIS extension. A failure returns 503 (Service
+        Unavailable) instead of crashing with 500, so callers such as the
+        frontend indicator and Postman get a clear "not ready" answer.
+      summary: Health check
+      tags:
+      - health
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthError'
+          description: ''
+components:
+  schemas:
+    Assumption:
+      type: object
+      properties:
+        label:
+          type: string
+          readOnly: true
+        value:
+          type: number
+          format: double
+          readOnly: true
+        unit:
+          type: string
+          readOnly: true
+        source:
+          type: string
+          readOnly: true
+        source_url:
+          type: string
+          format: uri
+          readOnly: true
+        as_of:
+          type: string
+          readOnly: true
+      required:
+      - as_of
+      - label
+      - source
+      - source_url
+      - unit
+      - value
+    Assumptions:
+      type: object
+      description: The five values that savings, payback and CO₂ are calculated from.
+      properties:
+        electricity_price:
+          $ref: '#/components/schemas/Assumption'
+        feed_in_tariff:
+          $ref: '#/components/schemas/Assumption'
+        self_consumption_share:
+          $ref: '#/components/schemas/Assumption'
+        system_cost_per_kwp:
+          $ref: '#/components/schemas/Assumption'
+        grid_co2_factor:
+          $ref: '#/components/schemas/Assumption'
+      required:
+      - electricity_price
+      - feed_in_tariff
+      - grid_co2_factor
+      - self_consumption_share
+      - system_cost_per_kwp
+    Building:
+      type: object
+      description: A building from LGL's LoD2 data, with its roof faces and walls.
+      properties:
+        gml_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        function:
+          type: string
+          readOnly: true
+        measured_height:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        street:
+          type: string
+          readOnly: true
+        house_number:
+          type: string
+          readOnly: true
+        locality:
+          type: string
+          readOnly: true
+        footprint:
+          type: object
+          description: GeoJSON MultiPolygon in WGS84 longitude/latitude
+          properties:
+            type:
+              type: string
+              enum:
+              - MultiPolygon
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: array
+                    items:
+                      type: number
+          required:
+          - type
+          - coordinates
+          readOnly: true
+        roofs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Roof'
+          readOnly: true
+        walls:
+          type: array
+          items:
+            $ref: '#/components/schemas/Wall'
+          readOnly: true
+      required:
+      - footprint
+      - function
+      - gml_id
+      - house_number
+      - locality
+      - measured_height
+      - name
+      - roofs
+      - street
+      - walls
+    Detail:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    DirectionEnum:
+      enum:
+      - N
+      - NE
+      - E
+      - SE
+      - S
+      - SW
+      - W
+      - NW
+      type: string
+      description: |-
+        * `N` - N
+        * `NE` - NE
+        * `E` - E
+        * `SE` - SE
+        * `S` - S
+        * `SW` - SW
+        * `W` - W
+        * `NW` - NW
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+        postgis:
+          type: string
+      required:
+      - postgis
+      - status
+    HealthError:
+      type: object
+      properties:
+        status:
+          type: string
+        database:
+          type: string
+      required:
+      - database
+      - status
+    NullEnum:
+      enum:
+      - null
+    Roof:
+      type: object
+      description: One roof face, from LGL's LoD2 data.
+      properties:
+        gml_id:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/RoofKindEnum'
+          readOnly: true
+        roof_type:
+          type: string
+          readOnly: true
+        area:
+          type: number
+          format: double
+          readOnly: true
+        tilt:
+          type: number
+          format: double
+          readOnly: true
+        azimuth:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+        direction:
+          nullable: true
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/DirectionEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        geometry:
+          type: object
+          description: GeoJSON Polygon in WGS84 longitude/latitude
+          properties:
+            type:
+              type: string
+              enum:
+              - Polygon
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: array
+                  items:
+                    type: number
+          required:
+          - type
+          - coordinates
+          readOnly: true
+      required:
+      - area
+      - azimuth
+      - direction
+      - geometry
+      - gml_id
+      - kind
+      - roof_type
+      - tilt
+    RoofKindEnum:
+      enum:
+      - roof
+      type: string
+      description: '* `roof` - roof'
+    Wall:
+      type: object
+      description: A wall, taken from an edge of the building's footprint.
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: '#/components/schemas/WallKindEnum'
+        tilt:
+          type: number
+          format: double
+        azimuth:
+          type: number
+          format: double
+        direction:
+          $ref: '#/components/schemas/DirectionEnum'
+        width:
+          type: number
+          format: double
+        geometry:
+          type: object
+          description: GeoJSON LineString in WGS84 longitude/latitude
+          properties:
+            type:
+              type: string
+              enum:
+              - LineString
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: number
+          required:
+          - type
+          - coordinates
+          readOnly: true
+      required:
+      - azimuth
+      - direction
+      - geometry
+      - id
+      - kind
+      - tilt
+      - width
+    WallKindEnum:
+      enum:
+      - wall
+      type: string
+      description: '* `wall` - wall'
+    YieldPerKwp:
+      type: object
+      properties:
+        annual_kwh_per_kwp:
+          type: number
+          format: double
+        monthly_kwh_per_kwp:
+          type: array
+          items:
+            type: number
+            format: double
+          maxItems: 12
+          minItems: 12
+      required:
+      - annual_kwh_per_kwp
+      - monthly_kwh_per_kwp
